@@ -9,12 +9,24 @@ import Insights from "./components/Insights";
 import Coach from "./components/Coach";
 import WorkoutPlanner from "./components/WorkoutPlanner";
 
+interface User {
+  name: string;
+}
+
+type ViewType =
+  | "dashboard"
+  | "meal-planner"
+  | "insights"
+  | "coach"
+  | "workout-planner";
+type AuthMode = "login" | "register";
+
 function App() {
-  const [user, setUser] = useState(null);
-  const [activeView, setActiveView] = useState("dashboard");
-  const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState("login");
-  const [darkMode, setDarkMode] = useState(() => {
+  const [user, setUser] = useState<User | null>(null);
+  const [activeView, setActiveView] = useState<ViewType>("dashboard");
+  const [showAuth, setShowAuth] = useState<boolean>(false);
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem("darkMode");
     return saved ? JSON.parse(saved) : false;
   });
@@ -28,28 +40,27 @@ function App() {
     localStorage.setItem("darkMode", JSON.stringify(darkMode));
   }, [darkMode]);
 
-  const toggleDarkMode = () => {
+  const toggleDarkMode = (): void => {
     setDarkMode(!darkMode);
   };
 
-  const handleGetStarted = (mode) => {
+  const handleGetStarted = (mode: AuthMode): void => {
     setAuthMode(mode);
     setShowAuth(true);
   };
 
-  const handleLogin = (name) => {
+  const handleLogin = (name: string): void => {
     setUser({ name });
     setShowAuth(false);
     setActiveView("dashboard");
   };
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
     setUser(null);
     setShowAuth(false);
     setActiveView("dashboard");
   };
 
-  // Show landing page if no user and auth not shown
   if (!user && !showAuth) {
     return (
       <LandingPage
@@ -60,7 +71,6 @@ function App() {
     );
   }
 
-  // Show auth page if auth is shown
   if (!user && showAuth) {
     return (
       <Auth
@@ -75,7 +85,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-300">
       <Navbar
-        user={user}
+        user={user!}
         onLogout={handleLogout}
         activeView={activeView}
         setActiveView={setActiveView}
@@ -84,7 +94,7 @@ function App() {
       />
       <main className="flex-grow pt-24 md:pt-20 pb-8">
         {activeView === "dashboard" && (
-          <Dashboard setActiveView={setActiveView} user={user} />
+          <Dashboard setActiveView={setActiveView} user={user!} />
         )}
         {activeView === "meal-planner" && (
           <MealPlanner setActiveView={setActiveView} />

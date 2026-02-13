@@ -1,17 +1,37 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
 
-function MealPlanner({ setActiveView }) {
-  const [selectedDate, setSelectedDate] = useState(19);
-  const [isGenerating, setIsGenerating] = useState(false);
+interface Meal {
+  type: string;
+  dish: string;
+  ingredients: string[];
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
 
-  // Generate calendar dates
-  const dates = [];
+type ViewType =
+  | "dashboard"
+  | "meal-planner"
+  | "insights"
+  | "coach"
+  | "workout-planner";
+
+interface MealPlannerProps {
+  setActiveView: (view: ViewType) => void;
+}
+
+function MealPlanner({ setActiveView }: MealPlannerProps) {
+  const [selectedDate, setSelectedDate] = useState<number>(19);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+
+  const dates: number[] = [];
   for (let i = 15; i <= 25; i++) {
     dates.push(i);
   }
 
-  const handleGeneratePlan = () => {
+  const handleGeneratePlan = (): void => {
     setIsGenerating(true);
     setTimeout(() => {
       setIsGenerating(false);
@@ -19,7 +39,7 @@ function MealPlanner({ setActiveView }) {
     }, 1500);
   };
 
-  const meals = [
+  const meals: Meal[] = [
     {
       type: "Breakfast",
       dish: "Greek Yogurt Parfait",
@@ -60,7 +80,6 @@ function MealPlanner({ setActiveView }) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
           Meal Planner
@@ -70,7 +89,6 @@ function MealPlanner({ setActiveView }) {
         </p>
       </div>
 
-      {/* Calendar */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
@@ -105,7 +123,6 @@ function MealPlanner({ setActiveView }) {
         </div>
       </div>
 
-      {/* Macro Bar */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/50 dark:to-blue-800/50 rounded-xl p-6 shadow-md">
           <p className="text-blue-800 dark:text-blue-300 font-semibold mb-1">
@@ -145,7 +162,6 @@ function MealPlanner({ setActiveView }) {
         </div>
       </div>
 
-      {/* Meal List */}
       <div className="space-y-4 mb-6">
         {meals.map((meal, index) => (
           <div
@@ -195,7 +211,6 @@ function MealPlanner({ setActiveView }) {
         ))}
       </div>
 
-      {/* Create New Plan Button */}
       <div className="flex justify-center">
         <button
           onClick={handleGeneratePlan}

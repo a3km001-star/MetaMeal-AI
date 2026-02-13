@@ -1,48 +1,61 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User } from "lucide-react";
 
-function Coach({ setActiveView }) {
-  const [messages, setMessages] = useState([
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
+type ViewType =
+  | "dashboard"
+  | "meal-planner"
+  | "insights"
+  | "coach"
+  | "workout-planner";
+
+interface CoachProps {
+  setActiveView: (view: ViewType) => void;
+}
+
+function Coach({ setActiveView }: CoachProps) {
+  const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
       content:
         "Hello! I'm your FitLife AI Coach. How can I help you with your nutrition goals today?",
     },
   ]);
-  const [input, setInput] = useState("");
-  const messagesEndRef = useRef(null);
+  const [input, setInput] = useState<string>("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleSend = (e) => {
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSend = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const userMessage = { role: "user", content: input };
+    const userMessage: Message = { role: "user", content: input };
     setMessages([...messages, userMessage]);
     setInput("");
 
-    // Scroll after user message
-    setTimeout(() => scrollToBottom(), 100);
-
-    // Simulate AI response
     setTimeout(() => {
-      const aiResponse = {
+      const aiResponse: Message = {
         role: "assistant",
         content:
           "Thanks for your question! I'm here to help. This is a demo response. In a real application, I would provide personalized nutrition advice based on your query.",
       };
       setMessages((prev) => [...prev, aiResponse]);
-      // Scroll after AI response
-      setTimeout(() => scrollToBottom(), 100);
     }, 1000);
   };
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
           AI Coach
@@ -52,12 +65,10 @@ function Coach({ setActiveView }) {
         </p>
       </div>
 
-      {/* Chat Container */}
       <div
         className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden flex flex-col"
         style={{ height: "calc(100vh - 300px)" }}
       >
-        {/* Messages Area */}
         <div className="flex-grow overflow-y-auto p-6 space-y-4">
           {messages.map((message, index) => (
             <div
@@ -73,7 +84,6 @@ function Coach({ setActiveView }) {
                     : ""
                 }`}
               >
-                {/* Avatar */}
                 <div
                   className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
                     message.role === "user"
@@ -88,7 +98,6 @@ function Coach({ setActiveView }) {
                   )}
                 </div>
 
-                {/* Message Bubble */}
                 <div
                   className={`rounded-2xl px-4 py-3 ${
                     message.role === "user"
@@ -104,7 +113,6 @@ function Coach({ setActiveView }) {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
         <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-800">
           <form onSubmit={handleSend} className="flex space-x-3">
             <input
@@ -125,7 +133,6 @@ function Coach({ setActiveView }) {
         </div>
       </div>
 
-      {/* Quick Questions */}
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <button
           onClick={() => setInput("What should I eat before a workout?")}

@@ -1,9 +1,19 @@
 import { TrendingUp, Scale, Activity } from "lucide-react";
 
-function Insights({ setActiveView }) {
+type ViewType =
+  | "dashboard"
+  | "meal-planner"
+  | "insights"
+  | "coach"
+  | "workout-planner";
+
+interface InsightsProps {
+  setActiveView: (view: ViewType) => void;
+}
+
+function Insights({ setActiveView }: InsightsProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
           Insights
@@ -13,9 +23,7 @@ function Insights({ setActiveView }) {
         </p>
       </div>
 
-      {/* Skeleton Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Weight Trend */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
@@ -57,7 +65,6 @@ function Insights({ setActiveView }) {
           </div>
         </div>
 
-        {/* Protein Intake */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
@@ -99,7 +106,6 @@ function Insights({ setActiveView }) {
           </div>
         </div>
 
-        {/* Calorie Consistency */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
@@ -142,7 +148,6 @@ function Insights({ setActiveView }) {
         </div>
       </div>
 
-      {/* Weekly Summary */}
       <div className="mt-8 bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md">
         <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
           Weekly Summary

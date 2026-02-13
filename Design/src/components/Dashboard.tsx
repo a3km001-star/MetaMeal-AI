@@ -7,14 +7,29 @@ import {
   Sparkles,
 } from "lucide-react";
 
-function Dashboard({ setActiveView, user }) {
-  const handleFeatureComingSoon = () => {
+interface User {
+  name: string;
+}
+
+type ViewType =
+  | "dashboard"
+  | "meal-planner"
+  | "insights"
+  | "coach"
+  | "workout-planner";
+
+interface DashboardProps {
+  setActiveView: (view: ViewType) => void;
+  user: User;
+}
+
+function Dashboard({ setActiveView, user }: DashboardProps) {
+  const handleFeatureComingSoon = (): void => {
     alert("Feature Coming Soon!");
   };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Hero */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
           Welcome back, {user.name}! 👋
@@ -24,7 +39,6 @@ function Dashboard({ setActiveView, user }) {
         </p>
       </div>
 
-      {/* Streak Card */}
       <div className="mb-8">
         <div className="bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50 rounded-2xl p-8 shadow-md hover:shadow-lg transition-all">
           <div className="flex items-center justify-between">
@@ -44,9 +58,7 @@ function Dashboard({ setActiveView, user }) {
         </div>
       </div>
 
-      {/* Action Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Generate Meal Plan */}
         <button
           onClick={() => setActiveView("meal-planner")}
           className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md hover:shadow-2xl hover:scale-105 transition-all text-left group"
@@ -62,7 +74,6 @@ function Dashboard({ setActiveView, user }) {
           </p>
         </button>
 
-        {/* Analyze Food */}
         <button
           onClick={handleFeatureComingSoon}
           className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md hover:shadow-2xl hover:scale-105 transition-all text-left group"
@@ -78,7 +89,6 @@ function Dashboard({ setActiveView, user }) {
           </p>
         </button>
 
-        {/* Ask Coach */}
         <button
           onClick={() => setActiveView("coach")}
           className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-md hover:shadow-2xl hover:scale-105 transition-all text-left group"
@@ -95,7 +105,6 @@ function Dashboard({ setActiveView, user }) {
         </button>
       </div>
 
-      {/* Quick Stats */}
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
           <div className="flex items-center justify-between">

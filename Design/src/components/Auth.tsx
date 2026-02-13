@@ -10,25 +10,35 @@ import {
   Sun,
 } from "lucide-react";
 
-function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
-  const [isSignIn, setIsSignIn] = useState(initialMode === "login");
+interface AuthProps {
+  onLogin: (name: string) => void;
+  initialMode?: "login" | "register";
+  darkMode: boolean;
+  toggleDarkMode: () => void;
+}
 
-  // Login form state
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+function Auth({
+  onLogin,
+  initialMode = "login",
+  darkMode,
+  toggleDarkMode,
+}: AuthProps) {
+  const [isSignIn, setIsSignIn] = useState<boolean>(initialMode === "login");
 
-  // Register form state
-  const [name, setName] = useState("");
-  const [age, setAge] = useState("");
-  const [height, setHeight] = useState("");
-  const [weight, setWeight] = useState("");
-  const [workoutExperience, setWorkoutExperience] = useState("");
-  const [dietPreference, setDietPreference] = useState("");
-  const [goal, setGoal] = useState("");
-  const [activityLevel, setActivityLevel] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
 
-  const handleSubmit = (e) => {
+  const [name, setName] = useState<string>("");
+  const [age, setAge] = useState<string>("");
+  const [height, setHeight] = useState<string>("");
+  const [weight, setWeight] = useState<string>("");
+  const [workoutExperience, setWorkoutExperience] = useState<string>("");
+  const [dietPreference, setDietPreference] = useState<string>("");
+  const [goal, setGoal] = useState<string>("");
+  const [activityLevel, setActivityLevel] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     if (isSignIn) {
       onLogin(email.split("@")[0] || "User");
@@ -44,7 +54,6 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4 transition-colors duration-300">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8 relative transition-colors duration-300">
-        {/* Dark Mode Toggle */}
         <button
           onClick={toggleDarkMode}
           className="absolute top-4 right-4 p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
@@ -57,14 +66,12 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
           )}
         </button>
 
-        {/* Logo */}
         <div className="flex justify-center mb-6">
           <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full p-4">
             <User className="w-8 h-8 text-white" />
           </div>
         </div>
 
-        {/* Title */}
         <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-2">
           Welcome to FitLife
         </h1>
@@ -72,7 +79,6 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
           Your personal nutrition companion
         </p>
 
-        {/* Toggle */}
         <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mb-6">
           <button
             onClick={() => setIsSignIn(true)}
@@ -96,14 +102,12 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
           </button>
         </div>
 
-        {/* Form */}
         <form
           onSubmit={handleSubmit}
           className="space-y-4 max-h-[60vh] overflow-y-auto px-2"
         >
           {!isSignIn && (
             <>
-              {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Full Name
@@ -121,7 +125,6 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
                 </div>
               </div>
 
-              {/* Age and Height */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -162,7 +165,6 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
                 </div>
               </div>
 
-              {/* Weight */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Weight (kg)
@@ -183,7 +185,6 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
                 </div>
               </div>
 
-              {/* Workout Experience */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Workout Experience Level
@@ -203,7 +204,6 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
                 </select>
               </div>
 
-              {/* Diet Preference */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Diet Preference
@@ -224,7 +224,6 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
                 </select>
               </div>
 
-              {/* Goal */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Fitness Goal
@@ -243,7 +242,6 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
                 </select>
               </div>
 
-              {/* Activity Level */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Activity Level
@@ -273,7 +271,6 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
             </>
           )}
 
-          {/* Email */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Email
@@ -291,7 +288,6 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
             </div>
           </div>
 
-          {/* Password */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Password
@@ -305,12 +301,11 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                 placeholder="Enter your password"
                 required
-                minLength="6"
+                minLength={6}
               />
             </div>
           </div>
 
-          {/* Confirm Password (Register only) */}
           {!isSignIn && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -325,7 +320,7 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                   placeholder="Confirm your password"
                   required
-                  minLength="6"
+                  minLength={6}
                 />
               </div>
             </div>
@@ -335,7 +330,9 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center">
                 <input type="checkbox" className="mr-2" />
-                <span className="text-gray-600 dark:text-gray-300">Remember me</span>
+                <span className="text-gray-600 dark:text-gray-300">
+                  Remember me
+                </span>
               </label>
               <a href="#" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
                 Forgot password?
@@ -351,7 +348,6 @@ function Auth({ onLogin, initialMode = "login", darkMode, toggleDarkMode }) {
           </button>
         </form>
 
-        {/* Footer */}
         <p className="text-center text-gray-600 dark:text-gray-400 text-sm mt-6">
           {isSignIn ? "Don't have an account? " : "Already have an account? "}
           <button

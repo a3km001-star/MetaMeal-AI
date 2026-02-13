@@ -10,6 +10,32 @@ import {
   Sun,
 } from "lucide-react";
 
+interface User {
+  name: string;
+}
+
+interface NavItem {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+type ViewType =
+  | "dashboard"
+  | "meal-planner"
+  | "insights"
+  | "coach"
+  | "workout-planner";
+
+interface NavbarProps {
+  user: User;
+  onLogout: () => void;
+  activeView: ViewType;
+  setActiveView: (view: ViewType) => void;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
+}
+
 function Navbar({
   user,
   onLogout,
@@ -17,8 +43,8 @@ function Navbar({
   setActiveView,
   darkMode,
   toggleDarkMode,
-}) {
-  const navItems = [
+}: NavbarProps) {
+  const navItems: NavItem[] = [
     { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
     { id: "meal-planner", name: "Meals", icon: Utensils },
     { id: "workout-planner", name: "Workout", icon: Dumbbell },
@@ -30,7 +56,6 @@ function Navbar({
     <nav className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-md z-50 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
           <div className="flex items-center space-x-2">
             <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg p-2">
               <Activity className="w-6 h-6 text-white" />
@@ -40,12 +65,11 @@ function Navbar({
             </span>
           </div>
 
-          {/* Navigation Menu */}
           <div className="hidden md:flex items-center space-x-2">
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveView(item.id)}
+                onClick={() => setActiveView(item.id as ViewType)}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
                   activeView === item.id
                     ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md"
@@ -58,7 +82,6 @@ function Navbar({
             ))}
           </div>
 
-          {/* Dark Mode Toggle & User Info & Logout */}
           <div className="flex items-center space-x-3">
             <button
               onClick={toggleDarkMode}
@@ -84,12 +107,11 @@ function Navbar({
           </div>
         </div>
 
-        {/* Mobile Navigation Menu */}
         <div className="md:hidden pb-3 flex space-x-2 overflow-x-auto">
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveView(item.id)}
+              onClick={() => setActiveView(item.id as ViewType)}
               className={`flex items-center space-x-2 px-3 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
                 activeView === item.id
                   ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md"

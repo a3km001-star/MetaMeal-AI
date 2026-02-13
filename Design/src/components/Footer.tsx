@@ -4,7 +4,6 @@ import {
   Instagram,
   Linkedin,
   Mail,
-  MapPin,
   Phone,
 } from "lucide-react";
 
@@ -13,7 +12,6 @@ function Footer() {
     <footer className="bg-[#0a1128] text-gray-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Product */}
           <div>
             <h3 className="text-white font-semibold text-lg mb-4">Product</h3>
             <ul className="space-y-2">
@@ -40,7 +38,6 @@ function Footer() {
             </ul>
           </div>
 
-          {/* Company */}
           <div>
             <h3 className="text-white font-semibold text-lg mb-4">Company</h3>
             <ul className="space-y-2">
@@ -67,7 +64,6 @@ function Footer() {
             </ul>
           </div>
 
-          {/* Support */}
           <div>
             <h3 className="text-white font-semibold text-lg mb-4">Support</h3>
             <ul className="space-y-2">
@@ -94,7 +90,6 @@ function Footer() {
             </ul>
           </div>
 
-          {/* Social */}
           <div>
             <h3 className="text-white font-semibold text-lg mb-4">Social</h3>
             <div className="flex space-x-4 mb-4">

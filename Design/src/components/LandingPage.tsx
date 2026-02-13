@@ -10,14 +10,24 @@ import {
   Sun,
 } from "lucide-react";
 
-function LandingPage({ onGetStarted, darkMode, toggleDarkMode }) {
+type AuthMode = "login" | "register";
+
+interface LandingPageProps {
+  onGetStarted: (mode: AuthMode) => void;
+  darkMode: boolean;
+  toggleDarkMode: () => void;
+}
+
+function LandingPage({
+  onGetStarted,
+  darkMode,
+  toggleDarkMode,
+}: LandingPageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300">
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md shadow-sm z-50 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            {/* Logo */}
             <div className="flex items-center space-x-2">
               <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg p-2">
                 <Activity className="w-6 h-6 text-white" />
@@ -27,7 +37,6 @@ function LandingPage({ onGetStarted, darkMode, toggleDarkMode }) {
               </span>
             </div>
 
-            {/* Dark Mode & Auth Buttons */}
             <div className="flex items-center space-x-3">
               <button
                 onClick={toggleDarkMode}
@@ -57,7 +66,6 @@ function LandingPage({ onGetStarted, darkMode, toggleDarkMode }) {
         </div>
       </header>
 
-      {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
@@ -80,7 +88,6 @@ function LandingPage({ onGetStarted, darkMode, toggleDarkMode }) {
             </button>
           </div>
 
-          {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20">
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg text-center hover:shadow-xl transition-all">
               <Users className="w-12 h-12 text-blue-600 mx-auto mb-3" />
@@ -116,7 +123,6 @@ function LandingPage({ onGetStarted, darkMode, toggleDarkMode }) {
         </div>
       </section>
 
-      {/* Features Section */}
       <section className="py-20 bg-white dark:bg-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -129,7 +135,6 @@ function LandingPage({ onGetStarted, darkMode, toggleDarkMode }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Feature 1 */}
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 hover:shadow-xl transition-all">
               <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <Apple className="w-8 h-8 text-white" />
@@ -143,7 +148,6 @@ function LandingPage({ onGetStarted, darkMode, toggleDarkMode }) {
               </p>
             </div>
 
-            {/* Feature 2 */}
             <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 hover:shadow-xl transition-all">
               <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <Dumbbell className="w-8 h-8 text-white" />
@@ -157,7 +161,6 @@ function LandingPage({ onGetStarted, darkMode, toggleDarkMode }) {
               </p>
             </div>
 
-            {/* Feature 3 */}
             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/30 dark:to-cyan-900/30 rounded-2xl p-8 hover:shadow-xl transition-all">
               <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <TrendingUp className="w-8 h-8 text-white" />
@@ -174,7 +177,6 @@ function LandingPage({ onGetStarted, darkMode, toggleDarkMode }) {
         </div>
       </section>
 
-      {/* Performance Section */}
       <section className="py-20 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -245,7 +247,6 @@ function LandingPage({ onGetStarted, darkMode, toggleDarkMode }) {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 transition-colors duration-300">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
@@ -263,7 +264,6 @@ function LandingPage({ onGetStarted, darkMode, toggleDarkMode }) {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="bg-gray-900 dark:bg-black text-gray-300 dark:text-gray-400 py-12 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">

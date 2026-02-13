@@ -1,11 +1,36 @@
 import { useState } from "react";
 import { Dumbbell, Plus, Loader2, Clock, Flame, Target } from "lucide-react";
 
-function WorkoutPlanner() {
-  const [selectedDay, setSelectedDay] = useState(1);
-  const [isGenerating, setIsGenerating] = useState(false);
+interface Exercise {
+  name: string;
+  sets: string;
+  reps: string;
+  rest: string;
+}
 
-  const handleGeneratePlan = () => {
+interface WorkoutDay {
+  focus: string;
+  duration: string;
+  calories: string;
+  exercises: Exercise[];
+}
+
+type ViewType =
+  | "dashboard"
+  | "meal-planner"
+  | "insights"
+  | "coach"
+  | "workout-planner";
+
+interface WorkoutPlannerProps {
+  setActiveView?: (view: ViewType) => void;
+}
+
+function WorkoutPlanner({ setActiveView }: WorkoutPlannerProps) {
+  const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
+
+  const handleGeneratePlan = (): void => {
     setIsGenerating(true);
     setTimeout(() => {
       setIsGenerating(false);
@@ -13,7 +38,7 @@ function WorkoutPlanner() {
     }, 1500);
   };
 
-  const days = [
+  const days: string[] = [
     "Monday",
     "Tuesday",
     "Wednesday",
@@ -23,13 +48,18 @@ function WorkoutPlanner() {
     "Sunday",
   ];
 
-  const workoutPlan = {
+  const workoutPlan: Record<number, WorkoutDay> = {
     1: {
       focus: "Chest & Triceps",
       duration: "45 min",
       calories: "420 kcal",
       exercises: [
-        { name: "Bench Press", sets: "4 sets", reps: "8-12 reps", rest: "90s" },
+        {
+          name: "Bench Press",
+          sets: "4 sets",
+          reps: "8-12 reps",
+          rest: "90s",
+        },
         {
           name: "Incline Dumbbell Press",
           sets: "3 sets",
@@ -129,7 +159,12 @@ function WorkoutPlanner() {
           reps: "20 reps",
           rest: "45s",
         },
-        { name: "Mountain Climbers", sets: "3 sets", reps: "30s", rest: "45s" },
+        {
+          name: "Mountain Climbers",
+          sets: "3 sets",
+          reps: "30s",
+          rest: "45s",
+        },
       ],
     },
     5: {
@@ -154,7 +189,12 @@ function WorkoutPlanner() {
       duration: "30 min",
       calories: "200 kcal",
       exercises: [
-        { name: "Light Jogging", sets: "1 set", reps: "10 min", rest: "N/A" },
+        {
+          name: "Light Jogging",
+          sets: "1 set",
+          reps: "10 min",
+          rest: "N/A",
+        },
         { name: "Yoga Flow", sets: "1 set", reps: "15 min", rest: "N/A" },
         { name: "Stretching", sets: "1 set", reps: "5 min", rest: "N/A" },
       ],
@@ -164,7 +204,12 @@ function WorkoutPlanner() {
       duration: "0 min",
       calories: "0 kcal",
       exercises: [
-        { name: "Complete Rest", sets: "-", reps: "Recovery Day", rest: "N/A" },
+        {
+          name: "Complete Rest",
+          sets: "-",
+          reps: "Recovery Day",
+          rest: "N/A",
+        },
       ],
     },
   };
@@ -173,7 +218,6 @@ function WorkoutPlanner() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
           Workout Plan Generator
@@ -183,7 +227,6 @@ function WorkoutPlanner() {
         </p>
       </div>
 
-      {/* Day Selector */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
@@ -208,7 +251,6 @@ function WorkoutPlanner() {
         </div>
       </div>
 
-      {/* Workout Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/50 dark:to-orange-800/50 rounded-xl p-6 shadow-md">
           <div className="flex items-center space-x-3">
@@ -251,7 +293,6 @@ function WorkoutPlanner() {
         </div>
       </div>
 
-      {/* Exercise List */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md mb-6">
         <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center">
           <Dumbbell className="w-6 h-6 mr-2 text-orange-600" />
@@ -294,7 +335,6 @@ function WorkoutPlanner() {
         </div>
       </div>
 
-      {/* Generate Button */}
       <div className="flex justify-center">
         <button
           onClick={handleGeneratePlan}
