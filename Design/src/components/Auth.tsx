@@ -1,4 +1,5 @@
 import { useState } from "react";
+import axios from "axios";
 import {
   Mail,
   Lock,
@@ -42,11 +43,17 @@ function Auth({
     e.preventDefault();
     if (isSignIn) {
       onLogin(email.split("@")[0] || "User");
+      // console.log("lol");
     } else {
       if (password !== confirmPassword) {
         alert("Passwords do not match!");
         return;
       }
+      axios
+        .post("http://localhost:3001/register", { name, email, password })
+        .then((result) => console.log(result))
+        .catch((err) => console.log(err));
+      console.log("The name is " + name);
       onLogin(name);
     }
   };
@@ -334,7 +341,10 @@ function Auth({
                   Remember me
                 </span>
               </label>
-              <a href="#" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">
+              <a
+                href="#"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+              >
                 Forgot password?
               </a>
             </div>
@@ -363,4 +373,3 @@ function Auth({
 }
 
 export default Auth;
-
