@@ -22,7 +22,8 @@ export const validatePassword = (password: string): PasswordValidation => {
   const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
 
   return {
-    isValid: minLength && hasUpperCase && hasLowerCase && hasNumbers,
+    isValid:
+      minLength && hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar,
     checks: {
       minLength,
       hasUpperCase,
@@ -47,10 +48,15 @@ export const validateRequired = (value: unknown): boolean => {
 export const validateNumber = (
   value: string | number,
   min: number | null = null,
-  max: number | null = null
+  max: number | null = null,
 ): boolean => {
-  const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) return false;
+  const num = typeof value === "string" ? Number(value) : value;
+  if (isNaN(num) || !isFinite(num)) return false;
+  // For string inputs, verify the string exactly represents the numeric value
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed !== String(num)) return false;
+  }
   if (min !== null && num < min) return false;
   if (max !== null && num > max) return false;
   return true;
@@ -62,7 +68,7 @@ export const validateAge = (age: string | number): boolean => {
 
 export const validateHeight = (
   height: string | number,
-  unit: "cm" | "ft" = "cm"
+  unit: "cm" | "ft" = "cm",
 ): boolean => {
   if (unit === "cm") {
     return validateNumber(height, 100, 250);
@@ -72,7 +78,7 @@ export const validateHeight = (
 
 export const validateWeight = (
   weight: string | number,
-  unit: "kg" | "lbs" = "kg"
+  unit: "kg" | "lbs" = "kg",
 ): boolean => {
   if (unit === "kg") {
     return validateNumber(weight, 30, 300);
@@ -94,14 +100,16 @@ export const validatePercentage = (value: string | number): boolean => {
 
 export const validateURL = (url: string): boolean => {
   try {
-    new URL(url);
-    return true;
+    const urlObj = new URL(url);
+    const allowedProtocols = ["http:", "https:"];
+    return allowedProtocols.includes(urlObj.protocol.toLowerCase());
   } catch {
     return false;
   }
 };
 
 export const validatePhoneNumber = (phone: string): boolean => {
-  const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/;
+  const phoneRegex =
+    /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/;
   return phoneRegex.test(phone.trim());
 };

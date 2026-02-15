@@ -1,4 +1,7 @@
-export const formatNumber = (num: number | string | null | undefined, decimals = 1): string => {
+export const formatNumber = (
+  num: number | string | null | undefined,
+  decimals = 1,
+): string => {
   if (num === null || num === undefined) return "0";
   const parsed = typeof num === "string" ? parseFloat(num) : num;
   if (isNaN(parsed)) return "0";
@@ -7,11 +10,16 @@ export const formatNumber = (num: number | string | null | undefined, decimals =
 
 export const formatCalories = (calories: number | string): string => {
   const num = typeof calories === "string" ? parseFloat(calories) : calories;
+  if (isNaN(num)) return "";
   return `${Math.round(num)} kcal`;
 };
 
-export const formatMacros = (grams: number | string, label?: string): string => {
+export const formatMacros = (
+  grams: number | string,
+  label?: string,
+): string => {
   const num = typeof grams === "string" ? parseFloat(grams) : grams;
+  if (isNaN(num)) return "";
   const formatted = Math.round(num);
   return label ? `${formatted}g ${label}` : `${formatted}g`;
 };
@@ -30,7 +38,7 @@ export const formatFat = (grams: number | string): string => {
 
 export const formatWeight = (
   value: number | string,
-  unit: "kg" | "lbs" | "g" = "kg"
+  unit: "kg" | "lbs" | "g" = "kg",
 ): string => {
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "0 kg";
@@ -47,7 +55,7 @@ export const formatWeight = (
 
 export const formatHeight = (
   value: number | string,
-  unit: "cm" | "ft" = "cm"
+  unit: "cm" | "ft" = "cm",
 ): string => {
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "0 cm";
@@ -71,7 +79,7 @@ export const calculateBMI = (
   weight: number | string,
   height: number | string,
   weightUnit: "kg" | "lbs" = "kg",
-  heightUnit: "cm" | "ft" = "cm"
+  heightUnit: "cm" | "ft" = "cm",
 ): number => {
   const w = typeof weight === "string" ? parseFloat(weight) : weight;
   const h = typeof height === "string" ? parseFloat(height) : height;
@@ -87,7 +95,7 @@ export const calculateBMI = (
 export const formatPercentage = (
   value: number | string,
   total: number | string,
-  decimals = 0
+  decimals = 0,
 ): string => {
   const val = typeof value === "string" ? parseFloat(value) : value;
   const tot = typeof total === "string" ? parseFloat(total) : total;
@@ -99,7 +107,10 @@ export const formatPercentage = (
 };
 
 export const formatDate = (date: Date | string | number): string => {
-  const d = typeof date === "string" || typeof date === "number" ? new Date(date) : date;
+  const d =
+    typeof date === "string" || typeof date === "number"
+      ? new Date(date)
+      : date;
   if (isNaN(d.getTime())) return "Invalid Date";
 
   return d.toLocaleDateString("en-US", {
@@ -110,7 +121,10 @@ export const formatDate = (date: Date | string | number): string => {
 };
 
 export const formatTime = (date: Date | string | number): string => {
-  const d = typeof date === "string" || typeof date === "number" ? new Date(date) : date;
+  const d =
+    typeof date === "string" || typeof date === "number"
+      ? new Date(date)
+      : date;
   if (isNaN(d.getTime())) return "Invalid Time";
 
   return d.toLocaleTimeString("en-US", {
@@ -167,10 +181,15 @@ export const formatMealType = (type: string): string => {
 
 export const formatCurrency = (
   amount: number | string,
-  currency = "USD"
+  currency = "USD",
 ): string => {
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
-  if (isNaN(num)) return "$0.00";
+  if (isNaN(num)) {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).format(0);
+  }
 
   return new Intl.NumberFormat("en-US", {
     style: "currency",

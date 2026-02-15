@@ -98,8 +98,8 @@ export const DAYS_OF_WEEK = [
 // BMI Categories
 export const BMI_CATEGORIES = {
   UNDERWEIGHT: { max: 18.5, label: "Underweight" },
-  NORMAL: { min: 18.5, max: 24.9, label: "Normal" },
-  OVERWEIGHT: { min: 25, max: 29.9, label: "Overweight" },
+  NORMAL: { min: 18.5, max: 25, label: "Normal" },
+  OVERWEIGHT: { min: 25, max: 30, label: "Overweight" },
   OBESE: { min: 30, label: "Obese" },
 } as const;
 
