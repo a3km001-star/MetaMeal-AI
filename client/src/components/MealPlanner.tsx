@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
 
 interface Meal {
@@ -11,20 +11,19 @@ interface Meal {
   fat: number;
 }
 
-type ViewType =
-  | "dashboard"
-  | "meal-planner"
-  | "insights"
-  | "coach"
-  | "workout-planner";
-
-interface MealPlannerProps {
-  setActiveView: (view: ViewType) => void;
-}
-
-function MealPlanner({ setActiveView }: MealPlannerProps) {
+function MealPlanner() {
   const [selectedDate, setSelectedDate] = useState<number>(19);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const generateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (generateTimerRef.current) {
+        clearTimeout(generateTimerRef.current);
+        generateTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const dates: number[] = [];
   for (let i = 15; i <= 25; i++) {
@@ -33,9 +32,13 @@ function MealPlanner({ setActiveView }: MealPlannerProps) {
 
   const handleGeneratePlan = (): void => {
     setIsGenerating(true);
-    setTimeout(() => {
+    if (generateTimerRef.current) {
+      clearTimeout(generateTimerRef.current);
+    }
+    generateTimerRef.current = setTimeout(() => {
       setIsGenerating(false);
       alert("New meal plan generated!");
+      generateTimerRef.current = null;
     }, 1500);
   };
 

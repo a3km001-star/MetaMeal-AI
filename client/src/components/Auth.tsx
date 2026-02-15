@@ -1,5 +1,4 @@
-import { useState } from "react";
-import axios from "axios";
+import { useEffect, useState } from "react";
 import {
   Mail,
   Lock,
@@ -10,10 +9,12 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
+import { registerUser } from "../api/auth";
+import type { AuthMode } from "../types";
 
 interface AuthProps {
   onLogin: (name: string) => void;
-  initialMode?: "login" | "register";
+  initialMode?: AuthMode;
   darkMode: boolean;
   toggleDarkMode: () => void;
 }
@@ -38,23 +39,67 @@ function Auth({
   const [goal, setGoal] = useState<string>("");
   const [activityLevel, setActivityLevel] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [rememberMe, setRememberMe] = useState<boolean>(() => {
+    const saved = localStorage.getItem("rememberMe");
+    if (!saved) return false;
+    try {
+      return JSON.parse(saved) as boolean;
+    } catch {
+      return false;
+    }
+  });
+  const [error, setError] = useState<string>("");
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>): void => {
+  useEffect(() => {
+    localStorage.setItem("rememberMe", JSON.stringify(rememberMe));
+    if (!rememberMe) {
+      localStorage.removeItem("rememberedEmail");
+    }
+  }, [rememberMe]);
+
+  useEffect(() => {
+    if (rememberMe) {
+      const savedEmail = localStorage.getItem("rememberedEmail");
+      if (savedEmail) {
+        setEmail(savedEmail);
+      }
+    }
+  }, []);
+
+  const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>,
+  ): Promise<void> => {
     e.preventDefault();
+    setError("");
+    if (rememberMe) {
+      localStorage.setItem("rememberedEmail", email);
+    } else {
+      localStorage.removeItem("rememberedEmail");
+    }
     if (isSignIn) {
       onLogin(email.split("@")[0] || "User");
-      // console.log("lol");
     } else {
       if (password !== confirmPassword) {
-        alert("Passwords do not match!");
+        setError("Passwords do not match.");
         return;
       }
-      axios
-        .post("http://localhost:3001/register", { name, email, password })
-        .then((result) => console.log(result))
-        .catch((err) => console.log(err));
-      console.log("The name is " + name);
-      onLogin(name);
+      try {
+        await registerUser({
+          name,
+          email,
+          password,
+          age,
+          height,
+          weight,
+          workoutExperience,
+          dietPreference,
+          goal,
+          activityLevel,
+        });
+        onLogin(name);
+      } catch {
+        setError("Registration failed. Please try again.");
+      }
     }
   };
 
@@ -336,7 +381,13 @@ function Auth({
           {isSignIn && (
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center">
-                <input type="checkbox" className="mr-2" />
+                <input
+                  id="remember-me"
+                  type="checkbox"
+                  className="mr-2"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
                 <span className="text-gray-600 dark:text-gray-300">
                   Remember me
                 </span>
@@ -349,6 +400,10 @@ function Auth({
               </a>
             </div>
           )}
+
+          {error ? (
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          ) : null}
 
           <button
             type="submit"

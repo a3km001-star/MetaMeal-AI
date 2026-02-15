@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dumbbell, Plus, Loader2, Clock, Flame, Target } from "lucide-react";
 
 interface Exercise {
@@ -15,26 +15,29 @@ interface WorkoutDay {
   exercises: Exercise[];
 }
 
-type ViewType =
-  | "dashboard"
-  | "meal-planner"
-  | "insights"
-  | "coach"
-  | "workout-planner";
-
-interface WorkoutPlannerProps {
-  setActiveView?: (view: ViewType) => void;
-}
-
-function WorkoutPlanner({ setActiveView }: WorkoutPlannerProps) {
+function WorkoutPlanner() {
   const [selectedDay, setSelectedDay] = useState<number>(1);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const generateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (generateTimerRef.current) {
+        clearTimeout(generateTimerRef.current);
+        generateTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const handleGeneratePlan = (): void => {
     setIsGenerating(true);
-    setTimeout(() => {
+    if (generateTimerRef.current) {
+      clearTimeout(generateTimerRef.current);
+    }
+    generateTimerRef.current = setTimeout(() => {
       setIsGenerating(false);
       alert("New workout plan generated!");
+      generateTimerRef.current = null;
     }, 1500);
   };
 

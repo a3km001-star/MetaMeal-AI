@@ -6,17 +6,7 @@ import {
   Scan,
   Sparkles,
 } from "lucide-react";
-
-interface User {
-  name: string;
-}
-
-type ViewType =
-  | "dashboard"
-  | "meal-planner"
-  | "insights"
-  | "coach"
-  | "workout-planner";
+import type { User, ViewType } from "../types";
 
 interface DashboardProps {
   setActiveView: (view: ViewType) => void;
@@ -24,6 +14,8 @@ interface DashboardProps {
 }
 
 function Dashboard({ setActiveView, user }: DashboardProps) {
+  const displayName = user.name && user.name.trim() ? user.name : "there";
+
   const handleFeatureComingSoon = (): void => {
     alert("Feature Coming Soon!");
   };
@@ -32,7 +24,7 @@ function Dashboard({ setActiveView, user }: DashboardProps) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 dark:text-white mb-2">
-          Welcome back, {user.name}! 👋
+          Welcome back, {displayName}! 👋
         </h1>
         <p className="text-gray-600 dark:text-gray-300">
           Let's make today count towards your nutrition goals

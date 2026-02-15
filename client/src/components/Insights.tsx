@@ -1,17 +1,6 @@
 import { TrendingUp, Scale, Activity } from "lucide-react";
 
-type ViewType =
-  | "dashboard"
-  | "meal-planner"
-  | "insights"
-  | "coach"
-  | "workout-planner";
-
-interface InsightsProps {
-  setActiveView: (view: ViewType) => void;
-}
-
-function Insights({ setActiveView }: InsightsProps) {
+function Insights() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
