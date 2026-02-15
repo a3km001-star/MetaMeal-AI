@@ -33,7 +33,7 @@ function LandingPage({
                 <Activity className="w-6 h-6 text-white" />
               </div>
               <span className="text-2xl font-bold text-gray-800 dark:text-white">
-                FitLife
+                MetaMeal AI
               </span>
             </div>
 
@@ -200,8 +200,8 @@ function LandingPage({
                 </div>
               </div>
               <p className="text-gray-700 dark:text-gray-300 mb-4 italic">
-                "FitLife completely transformed my approach to nutrition. Lost
-                20 pounds in 3 months!"
+                "MetaMeal AI completely transformed my approach to nutrition.
+                Lost 20 pounds in 3 months!"
               </p>
               <p className="font-semibold text-gray-800 dark:text-white">
                 - Sarah M.
@@ -272,7 +272,9 @@ function LandingPage({
                 <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg p-2">
                   <Activity className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xl font-bold text-white">FitLife</span>
+                <span className="text-xl font-bold text-white">
+                  MetaMeal AI
+                </span>
               </div>
               <p className="text-sm">
                 Your complete fitness companion for nutrition and training.
@@ -344,7 +346,7 @@ function LandingPage({
           </div>
 
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm">
-            <p>&copy; 2025 FitLife. All rights reserved.</p>
+            <p>&copy; 2025 MetaMeal AI. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -80,7 +80,7 @@ function Auth({
         </div>
 
         <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-2">
-          Welcome to FitLife
+          Welcome to MetaMeal AI
         </h1>
         <p className="text-center text-gray-600 dark:text-gray-400 mb-8">
           Your personal nutrition companion

@@ -121,7 +121,7 @@ function Footer() {
             <div className="space-y-2 text-sm">
               <div className="flex items-center space-x-2">
                 <Mail className="w-4 h-4" />
-                <span>support@fitlife.com</span>
+                <span>support@metameal.ai</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="w-4 h-4" />
@@ -132,7 +132,7 @@ function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm">
-          <p>&copy; 2025 FitLife. All rights reserved.</p>
+          <p>&copy; 2025 MetaMeal AI. All rights reserved.</p>
         </div>
       </div>
     </footer>
