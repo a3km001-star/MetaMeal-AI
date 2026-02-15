@@ -22,7 +22,7 @@ function Coach({ setActiveView }: CoachProps) {
     {
       role: "assistant",
       content:
-        "Hello! I'm your MetaMeal AIAI Coach. How can I help you with your nutrition goals today?",
+        "Hello! I'm your MetaMeal AI Coach. How can I help you with your nutrition goals today?",
     },
   ]);
   const [input, setInput] = useState<string>("");

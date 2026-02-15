@@ -200,7 +200,7 @@ function LandingPage({
                 </div>
               </div>
               <p className="text-gray-700 dark:text-gray-300 mb-4 italic">
-                "MetaMeal AIcompletely transformed my approach to nutrition.
+                "MetaMeal AI completely transformed my approach to nutrition.
                 Lost 20 pounds in 3 months!"
               </p>
               <p className="font-semibold text-gray-800 dark:text-white">

@@ -1,4 +1,4 @@
-# MetaMeal AI- Nutrition Platform
+# MetaMeal AI - Nutrition Platform
 
 A high-fidelity, responsive Single Page Application (SPA) prototype for a nutrition platform built with React, Tailwind CSS, and Lucide-React icons.
 
@@ -44,7 +44,7 @@ A high-fidelity, responsive Single Page Application (SPA) prototype for a nutrit
 
 ### Navigation
 
-- Fixed top navbar with MetaMeal AIlogo
+- Fixed top navbar with MetaMeal AI logo
 - User name display and logout functionality
 - Responsive footer with 4 columns (Product, Company, Support, Social)
 

@@ -121,7 +121,7 @@ function Footer() {
             <div className="space-y-2 text-sm">
               <div className="flex items-center space-x-2">
                 <Mail className="w-4 h-4" />
-                <span>support@MetaMeal AI.com</span>
+                <span>support@metameal.ai</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="w-4 h-4" />
