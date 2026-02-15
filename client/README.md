@@ -93,6 +93,12 @@ npm run preview
 
 ## Default Login
 
+> **SECURITY WARNING**
+> This is a demo/prototype-only authentication stub. Do not use in production.
+> Maintainers must disable or remove this stub before deployment and implement
+> proper authentication (real credential checks, session management, and
+> env-based flags to gate demo mode).
+
 - Email: Any valid email format
 - Password: Any password
 - User: Automatically logged in as "Ayan"

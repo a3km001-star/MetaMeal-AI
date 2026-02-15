@@ -1,31 +1,6 @@
-import {
-  Activity,
-  LogOut,
-  LayoutDashboard,
-  Utensils,
-  TrendingUp,
-  MessageCircle,
-  Dumbbell,
-  Moon,
-  Sun,
-} from "lucide-react";
-
-interface User {
-  name: string;
-}
-
-interface NavItem {
-  id: string;
-  name: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-type ViewType =
-  | "dashboard"
-  | "meal-planner"
-  | "insights"
-  | "coach"
-  | "workout-planner";
+import { Activity, LogOut, Moon, Sun } from "lucide-react";
+import { navItems } from "../routes/navItems";
+import type { User, ViewType } from "../types";
 
 interface NavbarProps {
   user: User;
@@ -44,14 +19,6 @@ function Navbar({
   darkMode,
   toggleDarkMode,
 }: NavbarProps) {
-  const navItems: NavItem[] = [
-    { id: "dashboard", name: "Dashboard", icon: LayoutDashboard },
-    { id: "meal-planner", name: "Meals", icon: Utensils },
-    { id: "workout-planner", name: "Workout", icon: Dumbbell },
-    { id: "insights", name: "Insights", icon: TrendingUp },
-    { id: "coach", name: "Coach", icon: MessageCircle },
-  ];
-
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-md z-50 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

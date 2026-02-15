@@ -95,24 +95,28 @@ function Footer() {
             <div className="flex space-x-4 mb-4">
               <a
                 href="#"
+                aria-label="Facebook"
                 className="bg-gray-800 p-2 rounded-lg hover:bg-blue-600 transition"
               >
                 <Facebook className="w-5 h-5" />
               </a>
               <a
                 href="#"
+                aria-label="Twitter"
                 className="bg-gray-800 p-2 rounded-lg hover:bg-sky-500 transition"
               >
                 <Twitter className="w-5 h-5" />
               </a>
               <a
                 href="#"
+                aria-label="Instagram"
                 className="bg-gray-800 p-2 rounded-lg hover:bg-pink-600 transition"
               >
                 <Instagram className="w-5 h-5" />
               </a>
               <a
                 href="#"
+                aria-label="LinkedIn"
                 className="bg-gray-800 p-2 rounded-lg hover:bg-blue-700 transition"
               >
                 <Linkedin className="w-5 h-5" />

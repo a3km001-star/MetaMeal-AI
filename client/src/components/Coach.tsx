@@ -1,17 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Bot, User } from "lucide-react";
+import type { ViewType } from "../types";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
-
-type ViewType =
-  | "dashboard"
-  | "meal-planner"
-  | "insights"
-  | "coach"
-  | "workout-planner";
 
 interface CoachProps {
   setActiveView: (view: ViewType) => void;
@@ -119,6 +113,7 @@ function Coach({ setActiveView }: CoachProps) {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              aria-label="Ask a nutrition question"
               placeholder="Ask me anything about nutrition..."
               className="flex-grow px-4 py-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />

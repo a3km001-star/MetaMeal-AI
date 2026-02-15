@@ -9,8 +9,7 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
-
-type AuthMode = "login" | "register";
+import type { AuthMode } from "../types";
 
 interface LandingPageProps {
   onGetStarted: (mode: AuthMode) => void;
@@ -135,20 +134,20 @@ function LandingPage({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 hover:shadow-xl transition-all">
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:bg-gradient-to-br dark:from-green-900/30 dark:to-emerald-900/30 rounded-2xl p-8 hover:shadow-xl transition-all">
               <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <Apple className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-4">
+              <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
                 Smart Meal Planning
               </h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-300">
                 AI-generated meal plans tailored to your dietary preferences,
                 goals, and lifestyle. Track macros effortlessly.
               </p>
             </div>
 
-            <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-8 hover:shadow-xl transition-all">
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:bg-gradient-to-br dark:from-orange-900/30 dark:to-red-900/30 rounded-2xl p-8 hover:shadow-xl transition-all">
               <div className="bg-gradient-to-br from-orange-500 to-red-600 rounded-full w-16 h-16 flex items-center justify-center mb-6">
                 <Dumbbell className="w-8 h-8 text-white" />
               </div>
@@ -222,7 +221,9 @@ function LandingPage({
                 "The workout plans are incredible. I've gained muscle and feel
                 stronger than ever."
               </p>
-              <p className="font-semibold text-gray-800">- Mike R.</p>
+              <p className="font-semibold text-gray-800 dark:text-white">
+                - Mike R.
+              </p>
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg transition-colors duration-300">
