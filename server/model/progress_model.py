@@ -1,0 +1,1 @@
+# Weight log schema
