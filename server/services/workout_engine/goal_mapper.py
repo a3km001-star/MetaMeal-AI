@@ -1,0 +1,1 @@
+# Maps goal → workout strategy.
