@@ -1,0 +1,273 @@
+Loading nutrition : nutrition.csv
+  -> 569 entries
+Loading recipes   : recipes.csv
+  -> 1057 entries
+
+[Nutrition CSV columns]: ['Code', 'Food Name', 'Scientific Name', 'Calories (kcal)', 'Protein (g)', 'Fat (g)', 'Carbohydrates (g)', 'Total Sugar (g)', 'Fibre (g)', 'Iron (g)', 'Calcium (g)', 'Vitamin D (g)']
+
+Resolved nutrient columns:
+  'Calories (kcal)' -> 'Calories (kcal)'
+  'Protein (g)' -> 'Protein (g)'
+  'Fat (g)' -> 'Fat (g)'
+  'Carbohydrates (g)' -> 'Carbohydrates (g)'
+  'Total Sugar (g)' -> 'Total Sugar (g)'
+  'Fibre (g)' -> 'Fibre (g)'
+  'Iron (g)' -> 'Iron (g)'
+  'Calcium (g)' -> 'Calcium (g)'
+  'Vitamin D (g)' -> 'Vitamin D (g)'
+
+[Recipe CSV columns]: ['TranslatedRecipeName', 'TranslatedIngredients', 'TotalTimeInMins', 'Cuisine', 'TranslatedInstructions', 'URL', 'Cleaned-Ingredients', 'Weights', 'image-url', 'Ingredient-count', 'Weight Count', 'Weight diff']
+
+Recipe columns resolved:
+  name      -> 'TranslatedRecipeName'
+  ingreds   -> 'Cleaned-Ingredients'
+  weights   -> 'Weights'
+
+=================================================================
+Recipe: Masala Karela Recipe
+  [SKIPPED]   'salt' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'amchur (dry mango powder)' (weight=3.0g, below 10.0g threshold)
+  [OK] 'karela (bitter gourd pavakkai)' -> 'AVG(3): Bitter gourd, jagged, teeth ridges, elongate, Bitter gourd, jagged, teeth ridges, short, Bitter gourd, jagged, smooth ridges, elongate' (score=0.70, weight=150.0g, cal+=29.5 [averaged 3 tied matches])
+  [SKIPPED]   'red chilli powder' (weight=3.0g, below 10.0g threshold)
+  [OK] 'gram flour (besan)' -> 'Wheat flour, refined' (score=0.57, weight=10.0g, cal+=35.2)
+  [OK] 'onion' -> 'AVG(4): Onion, stalk, Onion, big, Onion, small, Spring onion' (score=0.85, weight=30.0g, cal+=12.2 [averaged 4 tied matches])
+  [SKIPPED]   'cumin seeds (jeera)' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'coriander powder' (weight=3.0g, below 10.0g threshold)
+  [SKIPPED]   'turmeric powder' (weight=2.0g, below 10.0g threshold)
+  [OK] 'sunflower oil' -> 'Sunflower oil' (score=1.00, weight=10.0g, cal+=88.4)
+  -> Calories per 100g: 82.6 kcal (total weight used: 200g) | Not found: 0/10
+
+=================================================================
+Recipe: Hariyali Egg Curry Recipe In Coriander and Mint Gravy
+  [SKIPPED]   'green chillies' (weight=3.0g, below 10.0g threshold)
+  [SKIPPED]   'ginger' (weight=3.0g, below 10.0g threshold)
+  [SKIPPED]   'bay leaf (tej patta)' (weight=1.0g, below 10.0g threshold)
+  [OK] 'coriander (dhania) leaves' -> 'Coriander leaves' (score=0.75, weight=10.0g, cal+=3.1)
+  [SKIPPED]   'mint leaves (pudina)' (weight=5.0g, below 10.0g threshold)
+  [SKIPPED]   'cloves garlic' (weight=5.0g, below 10.0g threshold)
+  [SKIPPED]   'cinnamon stick (dalchini)' (weight=1.0g, below 10.0g threshold)
+  [OK] 'onion' -> 'AVG(4): Onion, stalk, Onion, big, Onion, small, Spring onion' (score=0.85, weight=30.0g, cal+=12.2 [averaged 4 tied matches])
+  [SKIPPED]   'coriander powder' (weight=4.0g, below 10.0g threshold)
+  [OK] 'eggs' -> 'Eggs, Cat fish' (score=0.85, weight=100.0g, cal+=143.4)
+  [SKIPPED]   'cloves (laung)' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'garam masala powder' (weight=2.0g, below 10.0g threshold)
+  [OK] 'sunflower oil' -> 'Sunflower oil' (score=1.00, weight=10.0g, cal+=88.4)
+  -> Calories per 100g: 164.7 kcal (total weight used: 150g) | Not found: 0/13
+
+=================================================================
+Recipe: Gourd Raita Recipe - Grated Bottle Gourd Yogurt Salad
+  [SKIPPED]   'coriander (dhania) leaves' (weight=5.0g, below 10.0g threshold)
+  [OK] 'cucumber grind' -> 'Cucumber, orange, round' (score=0.74, weight=60.0g, cal+=11.8)
+  [SKIPPED]   'salt' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'green' (weight=3.0g, below 10.0g threshold)
+  [SKIPPED]   'cumin powder' (weight=2.0g, below 10.0g threshold)
+  [OK] 'curd' -> 'Curd' (score=1.00, weight=150.0g, cal+=147.0)
+  [OK] 'gourd' -> 'AVG(12): Ash gourd, Bitter gourd, jagged, teeth ridges, elongate, Bitter gourd, jagged, teeth ridges, short, Bitter gourd, jagged, smooth ridges, elongate, Bottle gourd, elongate, pale green, Bottle gourd, round, pale green, Bottle gourd, elongate, dark green, Ridge gourd, Ridge gourd, smooth skin, Snake gourd, long, pale green, Snake gourd, long, dark green, Snake gourd, short' (score=0.85, weight=60.0g, cal+=9.1 [averaged 12 tied matches])
+  -> Calories per 100g: 62.2 kcal (total weight used: 270g) | Not found: 0/7
+
+=================================================================
+Recipe: Kesar Mango Lassi Recipe - Saffron Mango Lassi Recipe
+  [OK] 'mango pulp (puree)' -> 'AVG(2): Mango, ripe, neelam, Mango, ripe, paheri' (score=0.61, weight=180.0g, cal+=78.7 [averaged 2 tied matches])
+  [OK] 'milk cold milk' -> 'Condensed milk' (score=0.57, weight=50.0g, cal+=160.5)
+  [OK] 'ice cubes' -> 'AVG(2): Rice flakes, Rice puffed' (score=0.60, weight=20.0g, cal+=71.6 [averaged 2 tied matches])
+  [SKIPPED]   'saffron strands' (weight=1.0g, below 10.0g threshold)
+  [OK] 'curd' -> 'Curd' (score=1.00, weight=240.0g, cal+=235.2)
+  [OK] 'badam (almond)' -> 'Almond' (score=0.80, weight=15.0g, cal+=91.4)
+  -> Calories per 100g: 126.2 kcal (total weight used: 505g) | Not found: 0/6
+
+=================================================================
+Recipe: Matar Samosa Recipe -Green Pea Samosa
+  [SKIPPED]   'salt' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'cinnamon powder (dalchini)' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'amchur (dry mango powder)' (weight=3.0g, below 10.0g threshold)
+  [OK] 'ghee' -> 'Ghee' (score=1.00, weight=15.0g, cal+=134.5)
+  [SKIPPED]   'red chilli powder' (weight=3.0g, below 10.0g threshold)
+  [OK] 'green peas (matar)' -> 'Green gram, dal' (score=0.60, weight=100.0g, cal+=325.8)
+  [OK] 'water' -> 'AVG(5): Water melon, dark green (sugar baby), Water melon, pale green, Water Chestnut, Coconut Water, Freshwater Eel' (score=0.85, weight=40.0g, cal+=20.5 [averaged 5 tied matches])
+  [SKIPPED]   'green chilli sauce' (weight=5.0g, below 10.0g threshold)
+  [SKIPPED]   'cumin seeds (jeera)' (weight=2.0g, below 10.0g threshold)
+  [OK] 'flour (maida)' -> 'AVG(2): Wheat flour, refined, Wheat flour, atta' (score=0.70, weight=120.0g, cal+=403.3 [averaged 2 tied matches])
+  [SKIPPED]   'garam masala powder' (weight=2.0g, below 10.0g threshold)
+  [OK] 'sunflower oil' -> 'Sunflower oil' (score=1.00, weight=20.0g, cal+=176.8)
+  -> Calories per 100g: 359.6 kcal (total weight used: 295g) | Not found: 0/12
+
+=================================================================
+Recipe: Kesar Chai Recipe - A Delicious Saffron Flavored Indian Tea
+  [OK] 'milk' -> 'AVG(4): Milk, whole, Buffalo, Milk, whole, Cow, Milk fish, Condensed milk' (score=0.85, weight=60.0g, cal+=91.0 [averaged 4 tied matches])
+  [OK] 'water' -> 'AVG(5): Water melon, dark green (sugar baby), Water melon, pale green, Water Chestnut, Coconut Water, Freshwater Eel' (score=0.85, weight=200.0g, cal+=102.3 [averaged 5 tied matches])
+  [SKIPPED]   'saffron strands' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'tea leaves' (weight=5.0g, below 10.0g threshold)
+  -> Calories per 100g: 74.4 kcal (total weight used: 260g) | Not found: 0/4
+
+=================================================================
+Recipe: Dalia Pakora Recipe - Dalia Pakora Recipe
+  [SKIPPED]   'salt' (weight=2.0g, below 10.0g threshold)
+  [OK] 'wheat (dalia godumai rava)' -> 'Wheat, bulgur' (score=0.56, weight=100.0g, cal+=341.8)
+  [OK] 'water make pakora batter' -> 'Water melon, pale green' (score=0.57, weight=150.0g, cal+=25.1)
+  [SKIPPED]   'enos fruit salt' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'green chilli' (weight=3.0g, below 10.0g threshold)
+  [OK] 'coriander (dhania) leaves' -> 'Coriander leaves' (score=0.75, weight=10.0g, cal+=3.1)
+  [SKIPPED]   'ajwain (carom seeds)' (weight=1.0g, below 10.0g threshold)
+  [OK] 'sunflower oil the pakoras' -> 'Sunflower oil' (score=0.80, weight=40.0g, cal+=353.6)
+  [OK] 'gram flour (besan)' -> 'Wheat flour, refined' (score=0.57, weight=30.0g, cal+=105.5)
+  [OK] 'onion' -> 'AVG(4): Onion, stalk, Onion, big, Onion, small, Spring onion' (score=0.85, weight=40.0g, cal+=16.2 [averaged 4 tied matches])
+  [SKIPPED]   'cumin seeds (jeera)' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'turmeric powder' (weight=2.0g, below 10.0g threshold)
+  [OK] 'sunflower oil' -> 'Sunflower oil' (score=1.00, weight=15.0g, cal+=132.6)
+  -> Calories per 100g: 254.0 kcal (total weight used: 385g) | Not found: 0/13
+
+=================================================================
+Recipe: Chanar Dal Recipe - Bengali Steel Paneer & Potato Gravy
+  [OK] 'tomato' -> 'AVG(3): Tomato, green, Tomato, ripe, hybrid, Tomato, ripe, local' (score=0.85, weight=100.0g, cal+=19.8 [averaged 3 tied matches])
+  [SKIPPED]   'salt' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'ginger' (weight=5.0g, below 10.0g threshold)
+  [SKIPPED]   'bay leaf (tej patta)' (weight=1.0g, below 10.0g threshold)
+  [OK] 'paneer' -> 'Tofu (soy paneer)' (score=0.85, weight=100.0g, cal+=144.0)
+  [OK] 'potato (aloo)' -> 'AVG(5): Potato, brown skin, big, Potato, brown skin, small, Potato, red skin, Sweet potato, brown skin, Sweet potato, pink skin' (score=0.70, weight=80.0g, cal+=67.3 [averaged 5 tied matches])
+  [SKIPPED]   'red chilli powder' (weight=3.0g, below 10.0g threshold)
+  [SKIPPED]   'dry red chilli' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'sugar' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'cumin seeds (jeera)' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'panch phoran masala' (weight=5.0g, below 10.0g threshold)
+  [SKIPPED]   'turmeric powder' (weight=2.0g, below 10.0g threshold)
+  [OK] 'sunflower oil' -> 'Sunflower oil' (score=1.00, weight=15.0g, cal+=132.6)
+  -> Calories per 100g: 123.3 kcal (total weight used: 295g) | Not found: 0/13
+
+=================================================================
+Recipe: Tofu Pulao Recipe
+  [SKIPPED]   'turmeric powder' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'salt' (weight=2.0g, below 10.0g threshold)
+  [OK] 'tomato take' -> 'AVG(3): Tomato, green, Tomato, ripe, hybrid, Tomato, ripe, local' (score=0.70, weight=80.0g, cal+=15.8 [averaged 3 tied matches])
+  [OK] 'rice' -> 'AVG(8): Rice flakes, Rice puffed, Rice, raw, brown, Rice, parboiled, milled, Rice, raw, milled, Ricebean, Rice bran oil, Basmati rice' (score=0.85, weight=150.0g, cal+=621.1 [averaged 8 tied matches])
+  [OK] 'ghee' -> 'Ghee' (score=1.00, weight=15.0g, cal+=134.5)
+  [OK] 'capsicum (green) red yellow' -> 'Capsicum, green' (score=0.80, weight=40.0g, cal+=6.5)
+  [SKIPPED]   'red chilli powder' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'lentil sugar' (weight=5.0g, below 10.0g threshold)
+  [OK] 'ginger garlic paste' -> 'Ginger garlic paste' (score=1.00, weight=10.0g, cal+=9.2)
+  [SKIPPED]   'coriander' (weight=5.0g, below 10.0g threshold)
+  [SKIPPED]   'bay leaf' (weight=1.0g, below 10.0g threshold)
+  [OK] 'onion' -> 'AVG(4): Onion, stalk, Onion, big, Onion, small, Spring onion' (score=0.85, weight=40.0g, cal+=16.2 [averaged 4 tied matches])
+  [SKIPPED]   'coriander powder' (weight=4.0g, below 10.0g threshold)
+  [OK] 'tofu' -> 'Tofu (soy paneer)' (score=0.85, weight=80.0g, cal+=115.2)
+  [SKIPPED]   'green chillies' (weight=4.0g, below 10.0g threshold)
+  [SKIPPED]   'cumin seeds' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'garam masala powder' (weight=2.0g, below 10.0g threshold)
+  -> Calories per 100g: 221.4 kcal (total weight used: 415g) | Not found: 0/17
+
+=================================================================
+Recipe: Paneer and Green Peas Paratha Recipe - Paneer and Green Peas Paratha Recipe
+  [SKIPPED]   'turmeric powder' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'salt' (weight=2.0g, below 10.0g threshold)
+  [OK] 'wheat flour' -> 'AVG(2): Wheat flour, refined, Wheat flour, atta' (score=0.85, weight=120.0g, cal+=403.3 [averaged 2 tied matches])
+  [SKIPPED]   'mango powder powder' (weight=3.0g, below 10.0g threshold)
+  [SKIPPED]   'ginger green chilli' (weight=5.0g, below 10.0g threshold)
+  [SKIPPED]   'red chilli powder' (weight=3.0g, below 10.0g threshold)
+  [OK] 'water' -> 'AVG(5): Water melon, dark green (sugar baby), Water melon, pale green, Water Chestnut, Coconut Water, Freshwater Eel' (score=0.85, weight=40.0g, cal+=20.5 [averaged 5 tied matches])
+  [OK] 'oil' -> 'AVG(10): Coconut oil, Corn oil, Cotton seed oil, Gingelly oil, Groundnut oil, Mustard oil, Palm oil, Safflower oil, Soyabean oil, Sunflower oil' (score=0.88, weight=10.0g, cal+=88.4 [averaged 10 tied matches])
+  [SKIPPED]   'coriander powder' (weight=4.0g, below 10.0g threshold)
+  [OK] 'cheese crumble' -> 'Cheese' (score=0.80, weight=100.0g, cal+=402.0)
+  [OK] 'green peas' -> 'AVG(33): Green gram, dal, Green gram, whole, Peas, dry, Amaranth leaves, green, Amaranth leaves, red and green mix, Amaranth spinosus, leaves, green mix, Amaranth spinosus, leaves, red and green mix, Cabbage, green, Colocasia leaves, green, Gogu leaves, green, Bottle gourd, elongate, pale green, Bottle gourd, round, pale green, Bottle gourd, elongate, dark green, Capsicum, green, Colocasia, stem, green, Cucumber, green, elongate, Cucumber, green, short, Mango, green, raw, Peas, fresh, Plantain, green, Pumpkin, green, cylindrical, Snake gourd, long, pale green, Snake gourd, long, dark green, Tomato, green, Zucchini, green, Apple, green, Grapes, seeded, round, green, Grapes, seedless, round, green, Water melon, dark green (sugar baby), Water melon, pale green, Chillies, green - all varieties, Cardamom, green, Clam, green shell' (score=0.70, weight=60.0g, cal+=38.2 [averaged 33 tied matches])
+  -> Calories per 100g: 288.6 kcal (total weight used: 330g) | Not found: 0/11
+
+=================================================================
+Recipe: Murgh Malaiwala Recipe - Chicken In Rich Creamy Gravy
+  [SKIPPED]   'salt' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'bay leaf (tej patta)' (weight=1.0g, below 10.0g threshold)
+  [OK] 'ghee' -> 'Ghee' (score=1.00, weight=15.0g, cal+=134.5)
+  [OK] 'milk' -> 'AVG(4): Milk, whole, Buffalo, Milk, whole, Cow, Milk fish, Condensed milk' (score=0.85, weight=100.0g, cal+=151.7 [averaged 4 tied matches])
+  [OK] 'gram chicken' -> 'AVG(17): Bengal gram, dal, Bengal gram, whole, Black gram, dal, Black gram, whole, Green gram, dal, Green gram, whole, Horse gram, whole, Red gram, dal, Red gram, whole, Red gram, tender, fresh, Chicken mushroom, fresh, Chicken, poultry, leg, skinless, Chicken, poultry, thigh, skinless, Chicken, poultry, breast, skinless, Chicken, poultry, wing, skinless, Poultry, chicken, liver, Poultry, chicken, gizzard' (score=0.70, weight=170.0g, cal+=409.2 [averaged 17 tied matches])
+  [OK] 'onion' -> 'AVG(4): Onion, stalk, Onion, big, Onion, small, Spring onion' (score=0.85, weight=50.0g, cal+=20.3 [averaged 4 tied matches])
+  [OK] 'lemon' -> 'Lemon, juice' (score=0.85, weight=10.0g, cal+=3.7)
+  [OK] 'badam (almond) paste' -> 'Almond' (score=0.80, weight=15.0g, cal+=91.4)
+  [SKIPPED]   'cardamom powder (elaichi)' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'black pepper powder' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'cinnamon stick (dalchini)' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'ginger paste' (weight=8.0g, below 10.0g threshold)
+  [SKIPPED]   'kasuri methi (dried fenugreek leaves)' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'garlic paste' (weight=8.0g, below 10.0g threshold)
+  -> Calories per 100g: 225.2 kcal (total weight used: 360g) | Not found: 0/14
+
+=================================================================
+Recipe: Spicy Lemon Chicken Kebab Recipe
+  [SKIPPED]   'salt' (weight=2.0g, below 10.0g threshold)
+  [OK] 'red bell pepper (capsicum)' -> 'Capsicum, red' (score=0.70, weight=40.0g, cal+=7.9)
+  [SKIPPED]   'red chilli flakes' (weight=2.0g, below 10.0g threshold)
+  [OK] 'virgin olive oil' -> 'Gingelly oil' (score=0.57, weight=20.0g, cal+=176.8)
+  [OK] 'onion' -> 'AVG(4): Onion, stalk, Onion, big, Onion, small, Spring onion' (score=0.85, weight=40.0g, cal+=16.2 [averaged 4 tied matches])
+  [OK] 'lemon' -> 'Lemon, juice' (score=0.85, weight=15.0g, cal+=5.5)
+  [SKIPPED]   'thyme leaves' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'black pepper powder' (weight=2.0g, below 10.0g threshold)
+  [OK] 'chicken breasts' -> 'AVG(7): Chicken mushroom, fresh, Chicken, poultry, leg, skinless, Chicken, poultry, thigh, skinless, Chicken, poultry, breast, skinless, Chicken, poultry, wing, skinless, Poultry, chicken, liver, Poultry, chicken, gizzard' (score=0.70, weight=150.0g, cal+=253.3 [averaged 7 tied matches])
+  -> Calories per 100g: 173.5 kcal (total weight used: 265g) | Not found: 0/9
+
+=================================================================
+Recipe: Paneer Butter Masala Biryani Recipe - Layered Paneer Butter Masala Biryani Recipe
+  [OK] 'tomato' -> 'AVG(3): Tomato, green, Tomato, ripe, hybrid, Tomato, ripe, local' (score=0.85, weight=80.0g, cal+=15.8 [averaged 3 tied matches])
+  [SKIPPED]   'cloves garlic' (weight=5.0g, below 10.0g threshold)
+  [SKIPPED]   'kasoori methi' (weight=2.0g, below 10.0g threshold)
+  [OK] 'onion' -> 'AVG(4): Onion, stalk, Onion, big, Onion, small, Spring onion' (score=0.85, weight=40.0g, cal+=16.2 [averaged 4 tied matches])
+  [SKIPPED]   'cardamom' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'salt' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'green chilli' (weight=4.0g, below 10.0g threshold)
+  [OK] 'cottage cheese cube' -> 'Cheese' (score=0.80, weight=100.0g, cal+=402.0)
+  [SKIPPED]   'cinnamon' (weight=1.0g, below 10.0g threshold)
+  [OK] 'cashews' -> 'Cashew nut' (score=0.71, weight=10.0g, cal+=58.3)
+  [SKIPPED]   'garam masala powder' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'star anise' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'cardamom powder' (weight=2.0g, below 10.0g threshold)
+  [OK] 'rice' -> 'AVG(8): Rice flakes, Rice puffed, Rice, raw, brown, Rice, parboiled, milled, Rice, raw, milled, Ricebean, Rice bran oil, Basmati rice' (score=0.85, weight=100.0g, cal+=414.1 [averaged 8 tied matches])
+  [SKIPPED]   'red chilli powder' (weight=2.0g, below 10.0g threshold)
+  [OK] 'water' -> 'AVG(5): Water melon, dark green (sugar baby), Water melon, pale green, Water Chestnut, Coconut Water, Freshwater Eel' (score=0.85, weight=250.0g, cal+=127.9 [averaged 5 tied matches])
+  [SKIPPED]   'mint' (weight=5.0g, below 10.0g threshold)
+  [OK] 'coriander (dhania) leaves' -> 'Coriander leaves' (score=0.75, weight=10.0g, cal+=3.1)
+  [SKIPPED]   'ginger' (weight=5.0g, below 10.0g threshold)
+  [OK] 'ghee' -> 'Ghee' (score=1.00, weight=15.0g, cal+=134.5)
+  [SKIPPED]   'cumin powder' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'bay leaf' (weight=1.0g, below 10.0g threshold)
+  [OK] 'salt oil' -> 'Salt' (score=0.80, weight=10.0g, cal+=0.0)
+  [SKIPPED]   'black pepper' (weight=2.0g, below 10.0g threshold)
+  -> Calories per 100g: 190.6 kcal (total weight used: 615g) | Not found: 0/24
+
+=================================================================
+Recipe: Gond Ke Ladoo Recipe - Edible Gum Ladoo
+  [OK] 'cashew nuts' -> 'Cashew nut' (score=0.80, weight=15.0g, cal+=87.4)
+  [OK] 'wheat flour' -> 'AVG(2): Wheat flour, refined, Wheat flour, atta' (score=0.85, weight=120.0g, cal+=403.3 [averaged 2 tied matches])
+  [OK] 'ghee' -> 'Ghee' (score=1.00, weight=50.0g, cal+=448.5)
+  [OK] 'dry coconut (kopra)' -> 'Coconut, kernal, dry' (score=0.75, weight=15.0g, cal+=93.6)
+  [OK] 'sugar' -> 'AVG(2): Water melon, dark green (sugar baby), Sugarcane, juice' (score=0.85, weight=80.0g, cal+=31.3 [averaged 2 tied matches])
+  [OK] 'badam (almond)' -> 'Almond' (score=0.80, weight=15.0g, cal+=91.4)
+  [NOT FOUND] 'goond (edible gum)' (weight=30.0g)
+  -> Calories per 100g: 391.7 kcal (total weight used: 295g) | Not found: 1/7
+
+=================================================================
+Recipe: North Indian Style Mushroom Matar Masala Recipe
+  [OK] 'tomato paste' -> 'Tomato, green' (score=0.88, weight=30.0g, cal+=6.2)
+  [SKIPPED]   'green chilli' (weight=3.0g, below 10.0g threshold)
+  [SKIPPED]   'coriander powder' (weight=4.0g, below 10.0g threshold)
+  [SKIPPED]   'mustard seeds' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'asafoetida (hing)' (weight=1.0g, below 10.0g threshold)
+  [OK] 'green peas (matar)' -> 'Green gram, dal' (score=0.60, weight=60.0g, cal+=195.5)
+  [SKIPPED]   'red chilli powder' (weight=2.0g, below 10.0g threshold)
+  [OK] 'water' -> 'AVG(5): Water melon, dark green (sugar baby), Water melon, pale green, Water Chestnut, Coconut Water, Freshwater Eel' (score=0.85, weight=50.0g, cal+=25.6 [averaged 5 tied matches])
+  [OK] 'onion paste' -> 'AVG(2): Onion, big, Onion, small' (score=0.90, weight=30.0g, cal+=15.7 [averaged 2 tied matches])
+  [OK] 'ginger garlic paste' -> 'Ginger garlic paste' (score=1.00, weight=10.0g, cal+=9.2)
+  [OK] 'coriander (dhania) leaves' -> 'Coriander leaves' (score=0.75, weight=10.0g, cal+=3.1)
+  [OK] 'onion' -> 'AVG(4): Onion, stalk, Onion, big, Onion, small, Spring onion' (score=0.85, weight=30.0g, cal+=12.2 [averaged 4 tied matches])
+  [SKIPPED]   'cumin seeds (jeera)' (weight=2.0g, below 10.0g threshold)
+  [OK] 'button mushrooms' -> 'Button mushroom, fresh' (score=0.75, weight=100.0g, cal+=27.5)
+  [SKIPPED]   'turmeric powder' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'garam masala powder' (weight=2.0g, below 10.0g threshold)
+  [OK] 'sunflower oil' -> 'Sunflower oil' (score=1.00, weight=15.0g, cal+=132.6)
+  -> Calories per 100g: 127.6 kcal (total weight used: 335g) | Not found: 0/17
+
+=================================================================
+Recipe: Dhania Chole Masala Recipe - Chickpeas In Fresh Coriander Gravy
+  [SKIPPED]   'salt' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'black salt' (weight=2.0g, below 10.0g threshold)
+  [SKIPPED]   'ginger' (weight=5.0g, below 10.0g threshold)
+  [OK] 'coriander (dhania) leaves' -> 'Coriander leaves' (score=0.75, weight=10.0g, cal+=3.1)
+  [OK] 'ghee' -> 'Ghee' (score=1.00, weight=15.0g, cal+=134.5)
+  [SKIPPED]   'bay leaf (tej patta)' (weight=1.0g, below 10.0g threshold)
+  [SKIPPED]   'cloves garlic' (weight=5.0g, below 10.0g threshold)
+  [OK] 'kabuli chana (white chickpeas)' -> 'Kabuli chana' (score=0.80, weight=120.0g, cal+=436.8)
+  [OK] 'onion' -> 'AVG(4): Onion, stalk, Onion, big, Onion, small, Spring onion' (score=0.85, weight=40.0g, cal+=16.2 [averaged 4 tied matches])
