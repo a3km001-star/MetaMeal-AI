@@ -37,11 +37,11 @@ def clean_dataset(input_file: str = "Dataset.csv", output_file: str = "cleaned_f
             return False
         
         print(f"Reading dataset from: {input_path}")
-        df = pd.read_csv(input_path)
+        orig_df = pd.read_csv(input_path)
         
         # Display initial dataset info
-        print(f"Initial dataset shape: {df.shape}")
-        print(f"Columns found: {list(df.columns)}")
+        print(f"Initial dataset shape: {orig_df.shape}")
+        print(f"Columns found: {list(orig_df.columns)}")
         
         # Define column mapping from dataset columns to our required names
         column_mapping = {
@@ -60,22 +60,21 @@ def clean_dataset(input_file: str = "Dataset.csv", output_file: str = "cleaned_f
         }
         
         # Check if all required source columns exist
-        missing_columns = [col for col in column_mapping.keys() if col not in df.columns]
+        missing_columns = [col for col in column_mapping.keys() if col not in orig_df.columns]
         if missing_columns:
             print(f"Error: Missing required columns: {missing_columns}")
-            print(f"Available columns: {list(df.columns)}")
+            print(f"Available columns: {list(orig_df.columns)}")
             return False
         
         # Select and rename required columns
-        df = df[list(column_mapping.keys())].copy()
+        df = orig_df[list(column_mapping.keys())].copy()
         df = df.rename(columns=column_mapping)
         
         # Add optional columns if they exist and have data
         for old_col, new_col in optional_mapping.items():
-            if old_col in pd.read_csv(input_path).columns:
-                temp_df = pd.read_csv(input_path)
-                if not temp_df[old_col].isna().all():
-                    df[new_col] = temp_df[old_col]
+            if old_col in orig_df.columns:
+                if not orig_df[old_col].isna().all():
+                    df[new_col] = orig_df[old_col]
                 else:
                     print(f"Optional column '{old_col}' is empty, using default value")
                     df[new_col] = 'Unknown'
@@ -114,10 +113,15 @@ def clean_dataset(input_file: str = "Dataset.csv", output_file: str = "cleaned_f
         
         # Process and clean string columns
         string_columns = ['RecipeName', 'DietType', 'Ingredients', 'Instructions']
+        critical_columns_set = set(critical_columns)
         for col in string_columns:
             if col in df.columns:
-                # Convert to string and strip whitespace
-                df[col] = df[col].astype(str).str.strip()
+                # For critical columns, preserve NaN; for non-critical, fill empty strings
+                if col not in critical_columns_set:
+                    df[col] = df[col].fillna('').astype(str).str.strip()
+                else:
+                    # Keep NaN as is for critical columns (already handled by dropna)
+                    df[col] = df[col].astype(str).str.strip()
         
         # Standardize DietType values (convert "yes"/"no" to "Vegetarian"/"Non-Vegetarian")
         if 'DietType' in df.columns:

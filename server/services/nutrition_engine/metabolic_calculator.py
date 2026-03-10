@@ -9,7 +9,7 @@ This module provides functions to calculate metabolic values including:
 """
 
 from enum import Enum
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 from pydantic import BaseModel, Field, validator
 from fastapi import HTTPException
 
@@ -196,7 +196,7 @@ def calculate_tdee(bmr: float, activity_level: ActivityLevel) -> float:
         )
 
 
-def adjust_for_goal(tdee: float, goal: FitnessGoal) -> float:
+def adjust_for_goal(tdee: float, goal: FitnessGoal, sex: Optional[Sex] = None) -> float:
     """
     Adjust TDEE based on fitness goal.
     
@@ -205,9 +205,15 @@ def adjust_for_goal(tdee: float, goal: FitnessGoal) -> float:
     - Muscle Gain: +10% (creates calorie surplus)
     - Maintenance: 0% (no change)
     
+    Enforces minimum calorie floors for safety:
+    - Women: 1200 kcal/day minimum
+    - Men: 1500 kcal/day minimum
+    - If sex not specified: 1200 kcal/day minimum
+    
     Args:
         tdee (float): Total Daily Energy Expenditure in kcal/day
         goal (FitnessGoal): Fitness goal (fat_loss, muscle_gain, maintenance)
+        sex (Optional[Sex]): Biological sex for appropriate calorie floor
     
     Returns:
         float: Adjusted target calories in kcal/day
@@ -232,11 +238,17 @@ def adjust_for_goal(tdee: float, goal: FitnessGoal) -> float:
         adjustment = GOAL_ADJUSTMENTS[goal]
         target_calories = tdee * (1 + adjustment)
         
-        # Ensure minimum calories (safety check)
-        # Never go below 1200 for women or 1500 for men
-        MIN_CALORIES = 1200
-        if target_calories < MIN_CALORIES:
-            target_calories = MIN_CALORIES
+        # Ensure minimum calories for safety (sex-specific floors)
+        if sex == Sex.MALE:
+            min_calories = 1500
+        elif sex == Sex.FEMALE:
+            min_calories = 1200
+        else:
+            # Default to conservative minimum if sex not specified
+            min_calories = 1200
+        
+        if target_calories < min_calories:
+            target_calories = min_calories
         
         return round(target_calories, 2)
         
@@ -289,7 +301,7 @@ def calculate_complete_metabolic_profile(
     tdee = calculate_tdee(bmr, activity_level)
     
     # Adjust for goal
-    target_calories = adjust_for_goal(tdee, goal)
+    target_calories = adjust_for_goal(tdee, goal, sex)
     
     # Get adjustment percentage
     adjustment_percentage = GOAL_ADJUSTMENTS[goal] * 100

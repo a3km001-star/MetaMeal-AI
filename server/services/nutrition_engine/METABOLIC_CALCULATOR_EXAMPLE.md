@@ -262,7 +262,7 @@ profile = calculate_complete_metabolic_profile(
     activity_level=ActivityLevel.MODERATELY_ACTIVE,
     goal=FitnessGoal.FAT_LOSS
 )
-# Result: ~1552 kcal/day target
+# Result: ~1712 kcal/day target (BMR ≈1380, TDEE ≈2139, -20% for fat loss)
 ```
 
 ### Muscle Gain Example
@@ -274,7 +274,7 @@ profile = calculate_complete_metabolic_profile(
     activity_level=ActivityLevel.VERY_ACTIVE,
     goal=FitnessGoal.MUSCLE_GAIN
 )
-# Result: ~3100 kcal/day target
+# Result: ~3513 kcal/day target (BMR ≈1851, TDEE ≈3193, +10% for muscle gain)
 ```
 
 ### Maintenance Example

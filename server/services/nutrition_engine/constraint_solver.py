@@ -12,6 +12,7 @@ For use with FastAPI applications.
 """
 
 import random
+import re
 from typing import List, Dict, Optional, Tuple, Set
 from pydantic import BaseModel, Field
 from fastapi import HTTPException
@@ -97,13 +98,19 @@ def filter_by_allergies(
     # Convert allergies to lowercase for case-insensitive matching
     allergens_lower = [allergen.lower() for allergen in allergies]
     
-    # Filter out foods containing any allergen
+    # Filter out foods containing any allergen using word boundary matching
     filtered = []
     for food in foods:
         ingredients = food.get('Ingredients', '').lower()
         
-        # Check if any allergen is in ingredients
-        has_allergen = any(allergen in ingredients for allergen in allergens_lower)
+        # Check if any allergen is in ingredients using word boundaries
+        has_allergen = False
+        for allergen in allergens_lower:
+            # Use word boundary regex to avoid false positives (e.g., "nut" in "nutmeg")
+            pattern = r'\b' + re.escape(allergen) + r'\b'
+            if re.search(pattern, ingredients):
+                has_allergen = True
+                break
         
         if not has_allergen:
             filtered.append(food)
@@ -187,6 +194,8 @@ def split_calories_by_meal_type(
         }
     else:
         # Equal distribution for other meal counts
+        if meal_count <= 0:
+            raise ValueError("meal_count must be >= 1")
         per_meal = total_calories / meal_count
         meal_range = (per_meal * 0.8, per_meal * 1.2)
         return {f'meal_{i+1}': meal_range for i in range(meal_count)}
@@ -218,15 +227,17 @@ def ensure_variety(
     if not selected_meals:
         return True
     
-    # Get candidate ingredients
+    # Get candidate ingredients (strip whitespace and filter empty strings)
     candidate_ingredients = set(
-        candidate.get('Ingredients', '').lower().split(',')
+        ingredient.strip() for ingredient in candidate.get('Ingredients', '').lower().split(',')
+        if ingredient.strip()
     )
     
     # Check against each selected meal
     for meal in selected_meals:
         meal_ingredients = set(
-            meal.get('Ingredients', '').lower().split(',')
+            ingredient.strip() for ingredient in meal.get('Ingredients', '').lower().split(',')
+            if ingredient.strip()
         )
         
         # Count overlapping ingredients
@@ -293,7 +304,8 @@ def generate_meal_plan(
     allergies: Optional[List[str]] = None,
     max_meals: int = 5,
     calorie_tolerance: float = 0.10,
-    max_attempts: int = 100
+    max_attempts: int = 100,
+    shuffle: bool = True
 ) -> MealPlan:
     """
     Generate a meal plan that meets calorie target and constraints.
@@ -313,6 +325,7 @@ def generate_meal_plan(
         max_meals (int): Maximum number of meals (default 5)
         calorie_tolerance (float): Acceptable deviation (default 10%)
         max_attempts (int): Maximum attempts to generate valid plan
+        shuffle (bool): Whether to shuffle foods randomly (default True)
     
     Returns:
         MealPlan: Generated meal plan with nutritional breakdown
@@ -351,7 +364,9 @@ def generate_meal_plan(
         avg_calories_per_meal = calorie_target / max_meals
         
         # Step 2: Try to generate valid meal plan
-        best_plan = None
+        best_valid_plan = None
+        best_valid_deviation = float('inf')
+        best_plan = None  # For diagnostics only
         best_deviation = float('inf')
         
         for attempt in range(max_attempts):
@@ -363,7 +378,8 @@ def generate_meal_plan(
             
             # Make a copy of available foods for this attempt
             available_foods = filtered_foods.copy()
-            random.shuffle(available_foods)
+            if shuffle:
+                random.shuffle(available_foods)
             
             # Step 3: Intelligently select meals to reach target
             for food in available_foods:
@@ -423,9 +439,9 @@ def generate_meal_plan(
             is_valid = check_calorie_target(total_calories, calorie_target, calorie_tolerance)
             
             if is_valid:
-                if deviation < best_deviation:
-                    best_deviation = deviation
-                    best_plan = MealPlan(
+                if deviation < best_valid_deviation:
+                    best_valid_deviation = deviation
+                    best_valid_plan = MealPlan(
                         meals=selected_meals,
                         total_calories=round(total_calories, 2),
                         total_protein=round(total_protein, 2),
@@ -439,26 +455,24 @@ def generate_meal_plan(
                     # If deviation is very small, we can stop early
                     if deviation < 0.02:  # Less than 2% deviation
                         break
-            else:
-                # Even if not valid, save if it's the closest we've gotten
-                if deviation < best_deviation and selected_meals:
-                    # Relaxed acceptance for "best attempt"
-                    if deviation < calorie_tolerance * 1.5:  # Within 15% for 10% tolerance
-                        best_deviation = deviation
-                        best_plan = MealPlan(
-                            meals=selected_meals,
-                            total_calories=round(total_calories, 2),
-                            total_protein=round(total_protein, 2),
-                            total_carbs=round(total_carbs, 2),
-                            total_fat=round(total_fat, 2),
-                            target_calories=calorie_target,
-                            calorie_deviation=round(deviation * 100, 2),
-                            meal_count=len(selected_meals)
-                        )
+            
+            # Track best attempt for diagnostics (but don't return it)
+            if deviation < best_deviation and selected_meals:
+                best_deviation = deviation
+                best_plan = MealPlan(
+                    meals=selected_meals,
+                    total_calories=round(total_calories, 2),
+                    total_protein=round(total_protein, 2),
+                    total_carbs=round(total_carbs, 2),
+                    total_fat=round(total_fat, 2),
+                    target_calories=calorie_target,
+                    calorie_deviation=round(deviation * 100, 2),
+                    meal_count=len(selected_meals)
+                )
         
-        # Return best plan found
-        if best_plan:
-            return best_plan
+        # Return best valid plan found
+        if best_valid_plan:
+            return best_valid_plan
         else:
             raise ValueError(
                 f"Unable to generate meal plan within {calorie_tolerance*100}% tolerance "
@@ -533,7 +547,8 @@ def optimize_meal_selection(
         diet_type=diet_type,
         allergies=allergies,
         max_meals=5,
-        calorie_tolerance=0.10
+        calorie_tolerance=0.10,
+        shuffle=False
     )
 
 

@@ -167,7 +167,8 @@ def create_meal_plan(user_profile: UserProfile) -> CompleteMealPlan:
         # Step 4: Adjust for goal
         calorie_target = adjust_for_goal(
             tdee=tdee,
-            goal=user_profile.goal
+            goal=user_profile.goal,
+            sex=user_profile.sex
         )
         
         # Step 5: Calculate macro targets
@@ -184,7 +185,8 @@ def create_meal_plan(user_profile: UserProfile) -> CompleteMealPlan:
             diet_type=user_profile.diet_type,
             allergies=user_profile.allergies or [],
             max_meals=user_profile.max_meals or 4,
-            calorie_tolerance=0.15  # Allow 15% deviation
+            calorie_tolerance=0.20,  # Allow 20% deviation for more flexibility
+            max_attempts=150  # Increase attempts for better results
         )
         
         # Step 8: Format meals into response structure
@@ -202,7 +204,10 @@ def create_meal_plan(user_profile: UserProfile) -> CompleteMealPlan:
             ))
         
         # Calculate accuracy
-        calorie_accuracy = 100 - abs((meal_plan.total_calories - calorie_target) / calorie_target * 100)
+        if calorie_target == 0:
+            calorie_accuracy = 100.0 if meal_plan.total_calories == 0 else 0.0
+        else:
+            calorie_accuracy = 100 - abs((meal_plan.total_calories - calorie_target) / calorie_target * 100)
         
         # Create complete response
         complete_plan = CompleteMealPlan(
@@ -357,21 +362,84 @@ def regenerate_meal_plan_with_changes(
             user_profile.height, user_profile.sex
         )
         tdee = calculate_tdee(bmr, user_profile.activity_level)
-        calorie_target = adjust_for_goal(tdee, user_profile.goal)
+        calorie_target = adjust_for_goal(tdee, user_profile.goal, user_profile.sex)
         
-        # Generate new meal plan
+        # Calculate macro targets
+        macros = calculate_macros(
+            calories=calorie_target,
+            goal=user_profile.goal,
+            weight_kg=user_profile.weight
+        )
+        
+        # Generate new meal plan with filtered/sorted foods
         meal_plan = generate_meal_plan(
             foods=foods,
             calorie_target=calorie_target,
             diet_type=user_profile.diet_type,
             allergies=user_profile.allergies or [],
             max_meals=user_profile.max_meals or 4,
-            calorie_tolerance=0.15
+            calorie_tolerance=0.20,  # Allow 20% deviation for flexibility
+            max_attempts=150,
+            shuffle=not prefer_high_protein  # Don't shuffle if we sorted by preference
         )
         
-        # Use create_meal_plan to get full formatted response
-        # But with filtered dataset
-        return create_meal_plan(user_profile)
+        # Format meals into response structure
+        formatted_meals = []
+        for meal in meal_plan.meals:
+            formatted_meals.append(MealItem(
+                name=meal.get('RecipeName', 'Unknown'),
+                calories=round(meal.get('Calories', 0), 2),
+                protein=round(meal.get('Protein', 0), 2),
+                carbohydrates=round(meal.get('Carbohydrates', 0), 2),
+                fat=round(meal.get('Fat', 0), 2),
+                ingredients=meal.get('Ingredients', ''),
+                instructions=meal.get('Instructions', ''),
+                diet_type=meal.get('DietType', 'Unknown')
+            ))
+        
+        # Calculate accuracy
+        if calorie_target == 0:
+            calorie_accuracy = 100.0 if meal_plan.total_calories == 0 else 0.0
+        else:
+            calorie_accuracy = 100 - abs((meal_plan.total_calories - calorie_target) / calorie_target * 100)
+        
+        # Create complete response
+        complete_plan = CompleteMealPlan(
+            user_profile={
+                'age': user_profile.age,
+                'weight': user_profile.weight,
+                'height': user_profile.height,
+                'sex': user_profile.sex.value,
+                'activity_level': user_profile.activity_level.value,
+                'goal': user_profile.goal.value,
+                'diet_type': user_profile.diet_type,
+                'allergies': user_profile.allergies
+            },
+            bmr=round(bmr, 2),
+            tdee=round(tdee, 2),
+            calorie_target=round(calorie_target, 2),
+            macros={
+                'protein': macros.protein_grams,
+                'carbohydrates': macros.carb_grams,
+                'fat': macros.fat_grams
+            },
+            macro_percentages={
+                'protein': macros.protein_percentage,
+                'carbohydrates': macros.carb_percentage,
+                'fat': macros.fat_percentage
+            },
+            meals=formatted_meals,
+            meal_count=meal_plan.meal_count,
+            total_calories=meal_plan.total_calories,
+            total_protein=meal_plan.total_protein,
+            total_carbs=meal_plan.total_carbs,
+            total_fat=meal_plan.total_fat,
+            calorie_accuracy=round(calorie_accuracy, 2),
+            goal=user_profile.goal.value,
+            activity_level=user_profile.activity_level.value
+        )
+        
+        return complete_plan
         
     except Exception as e:
         raise HTTPException(
@@ -456,25 +524,25 @@ def compare_plan_to_targets(meal_plan: CompleteMealPlan) -> Dict[str, Any]:
             'target': meal_plan.calorie_target,
             'actual': meal_plan.total_calories,
             'difference': meal_plan.total_calories - meal_plan.calorie_target,
-            'percentage': round((meal_plan.total_calories / meal_plan.calorie_target) * 100, 2)
+            'percentage': round((meal_plan.total_calories / meal_plan.calorie_target) * 100, 2) if meal_plan.calorie_target > 0 else 0
         },
         'protein': {
             'target': meal_plan.macros['protein'],
             'actual': meal_plan.total_protein,
             'difference': meal_plan.total_protein - meal_plan.macros['protein'],
-            'percentage': round((meal_plan.total_protein / meal_plan.macros['protein']) * 100, 2)
+            'percentage': round((meal_plan.total_protein / meal_plan.macros['protein']) * 100, 2) if meal_plan.macros['protein'] > 0 else 0
         },
         'carbohydrates': {
             'target': meal_plan.macros['carbohydrates'],
             'actual': meal_plan.total_carbs,
             'difference': meal_plan.total_carbs - meal_plan.macros['carbohydrates'],
-            'percentage': round((meal_plan.total_carbs / meal_plan.macros['carbohydrates']) * 100, 2)
+            'percentage': round((meal_plan.total_carbs / meal_plan.macros['carbohydrates']) * 100, 2) if meal_plan.macros['carbohydrates'] > 0 else 0
         },
         'fat': {
             'target': meal_plan.macros['fat'],
             'actual': meal_plan.total_fat,
             'difference': meal_plan.total_fat - meal_plan.macros['fat'],
-            'percentage': round((meal_plan.total_fat / meal_plan.macros['fat']) * 100, 2)
+            'percentage': round((meal_plan.total_fat / meal_plan.macros['fat']) * 100, 2) if meal_plan.macros['fat'] > 0 else 0
         },
         'overall_accuracy': meal_plan.calorie_accuracy
     }

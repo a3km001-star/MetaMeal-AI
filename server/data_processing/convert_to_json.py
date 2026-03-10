@@ -77,12 +77,15 @@ def convert_csv_to_json(
             print(f"  Size: {file_size:,} bytes ({file_size/1024:.1f} KB)")
             print(f"  Total recipes: {len(recipes_list)}")
             
-            # Display sample recipe
-            print("\n=== Sample Recipe ===")
-            sample = recipes_list[0]
-            for key, value in sample.items():
-                display_value = str(value)[:100] + "..." if len(str(value)) > 100 else str(value)
-                print(f"{key}: {display_value}")
+            # Display sample recipe only if recipes exist
+            if recipes_list:
+                print("\n=== Sample Recipe ===")
+                sample = recipes_list[0]
+                for key, value in sample.items():
+                    display_value = str(value)[:100] + "..." if len(str(value)) > 100 else str(value)
+                    print(f"{key}: {display_value}")
+            else:
+                print("\nWarning: No data rows found in the dataset")
             
             return True
         else:
@@ -95,7 +98,7 @@ def convert_csv_to_json(
     except pd.errors.EmptyDataError:
         print("Error: The input file is empty")
         return False
-    except json.JSONDecodeError as e:
+    except (TypeError, OverflowError) as e:
         print(f"Error: JSON encoding failed - {e}")
         return False
     except Exception as e:
