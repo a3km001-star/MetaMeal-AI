@@ -6,3 +6,4 @@ langchain
 langgraph
 openai
 python-dotenv
+pandas
