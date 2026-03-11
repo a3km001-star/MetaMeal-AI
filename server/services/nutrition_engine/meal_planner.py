@@ -109,6 +109,89 @@ class CompleteMealPlan(BaseModel):
     activity_level: str = Field(..., description="Activity level")
 
 
+def _build_meal_plan_response(
+    user_profile: UserProfile,
+    bmr: float,
+    tdee: float,
+    calorie_target: float,
+    macros: MacroSplit,
+    meal_plan: MealPlan
+) -> CompleteMealPlan:
+    """
+    Build a CompleteMealPlan response from raw calculation results.
+    
+    This helper extracts the common response-building logic shared by
+    create_meal_plan() and regenerate_meal_plan_with_changes().
+    
+    Args:
+        user_profile: User's profile
+        bmr: Basal Metabolic Rate (kcal/day)
+        tdee: Total Daily Energy Expenditure (kcal/day)
+        calorie_target: Target daily calories
+        macros: Macro split calculation result
+        meal_plan: Generated meal plan from constraint solver
+    
+    Returns:
+        CompleteMealPlan: Formatted response with all nutritional information
+    """
+    # Format meals into response structure
+    formatted_meals = []
+    for meal in meal_plan.meals:
+        formatted_meals.append(MealItem(
+            name=meal.get('RecipeName', 'Unknown'),
+            calories=round(meal.get('Calories', 0), 2),
+            protein=round(meal.get('Protein', 0), 2),
+            carbohydrates=round(meal.get('Carbohydrates', 0), 2),
+            fat=round(meal.get('Fat', 0), 2),
+            ingredients=meal.get('Ingredients', ''),
+            instructions=meal.get('Instructions', ''),
+            diet_type=meal.get('DietType', 'Unknown')
+        ))
+    
+    # Calculate accuracy with clamping to prevent negative values
+    if calorie_target == 0:
+        calorie_accuracy = 100.0 if meal_plan.total_calories == 0 else 0.0
+    else:
+        raw_accuracy = 100 - abs((meal_plan.total_calories - calorie_target) / calorie_target * 100)
+        calorie_accuracy = max(0.0, raw_accuracy)  # Clamp to minimum of 0
+    
+    # Create complete response
+    return CompleteMealPlan(
+        user_profile={
+            'age': user_profile.age,
+            'weight': user_profile.weight,
+            'height': user_profile.height,
+            'sex': user_profile.sex.value,
+            'activity_level': user_profile.activity_level.value,
+            'goal': user_profile.goal.value,
+            'diet_type': user_profile.diet_type,
+            'allergies': user_profile.allergies
+        },
+        bmr=round(bmr, 2),
+        tdee=round(tdee, 2),
+        calorie_target=round(calorie_target, 2),
+        macros={
+            'protein': macros.protein_grams,
+            'carbohydrates': macros.carb_grams,
+            'fat': macros.fat_grams
+        },
+        macro_percentages={
+            'protein': macros.protein_percentage,
+            'carbohydrates': macros.carb_percentage,
+            'fat': macros.fat_percentage
+        },
+        meals=formatted_meals,
+        meal_count=meal_plan.meal_count,
+        total_calories=meal_plan.total_calories,
+        total_protein=meal_plan.total_protein,
+        total_carbs=meal_plan.total_carbs,
+        total_fat=meal_plan.total_fat,
+        calorie_accuracy=round(calorie_accuracy, 2),
+        goal=user_profile.goal.value,
+        activity_level=user_profile.activity_level.value
+    )
+
+
 def create_meal_plan(user_profile: UserProfile) -> CompleteMealPlan:
     """
     Create a complete meal plan for a user based on their profile.
@@ -209,63 +292,15 @@ def create_meal_plan(user_profile: UserProfile) -> CompleteMealPlan:
             max_attempts=100  # Optimization attempts for best macro balance
         )
         
-        # Step 8: Format meals into response structure
-        formatted_meals = []
-        for meal in meal_plan.meals:
-            formatted_meals.append(MealItem(
-                name=meal.get('RecipeName', 'Unknown'),
-                calories=round(meal.get('Calories', 0), 2),
-                protein=round(meal.get('Protein', 0), 2),
-                carbohydrates=round(meal.get('Carbohydrates', 0), 2),
-                fat=round(meal.get('Fat', 0), 2),
-                ingredients=meal.get('Ingredients', ''),
-                instructions=meal.get('Instructions', ''),
-                diet_type=meal.get('DietType', 'Unknown')
-            ))
-        
-        # Calculate accuracy
-        if calorie_target == 0:
-            calorie_accuracy = 100.0 if meal_plan.total_calories == 0 else 0.0
-        else:
-            calorie_accuracy = 100 - abs((meal_plan.total_calories - calorie_target) / calorie_target * 100)
-        
-        # Create complete response
-        complete_plan = CompleteMealPlan(
-            user_profile={
-                'age': user_profile.age,
-                'weight': user_profile.weight,
-                'height': user_profile.height,
-                'sex': user_profile.sex.value,
-                'activity_level': user_profile.activity_level.value,
-                'goal': user_profile.goal.value,
-                'diet_type': user_profile.diet_type,
-                'allergies': user_profile.allergies
-            },
-            bmr=round(bmr, 2),
-            tdee=round(tdee, 2),
-            calorie_target=round(calorie_target, 2),
-            macros={
-                'protein': macros.protein_grams,
-                'carbohydrates': macros.carb_grams,
-                'fat': macros.fat_grams
-            },
-            macro_percentages={
-                'protein': macros.protein_percentage,
-                'carbohydrates': macros.carb_percentage,
-                'fat': macros.fat_percentage
-            },
-            meals=formatted_meals,
-            meal_count=meal_plan.meal_count,
-            total_calories=meal_plan.total_calories,
-            total_protein=meal_plan.total_protein,
-            total_carbs=meal_plan.total_carbs,
-            total_fat=meal_plan.total_fat,
-            calorie_accuracy=round(calorie_accuracy, 2),
-            goal=user_profile.goal.value,
-            activity_level=user_profile.activity_level.value
+        # Step 8: Build and return response using shared helper
+        return _build_meal_plan_response(
+            user_profile=user_profile,
+            bmr=bmr,
+            tdee=tdee,
+            calorie_target=calorie_target,
+            macros=macros,
+            meal_plan=meal_plan
         )
-        
-        return complete_plan
         
     except HTTPException:
         # Re-raise HTTP exceptions from underlying modules
@@ -405,63 +440,15 @@ def regenerate_meal_plan_with_changes(
             max_attempts=100
         )
         
-        # Format meals into response structure
-        formatted_meals = []
-        for meal in meal_plan.meals:
-            formatted_meals.append(MealItem(
-                name=meal.get('RecipeName', 'Unknown'),
-                calories=round(meal.get('Calories', 0), 2),
-                protein=round(meal.get('Protein', 0), 2),
-                carbohydrates=round(meal.get('Carbohydrates', 0), 2),
-                fat=round(meal.get('Fat', 0), 2),
-                ingredients=meal.get('Ingredients', ''),
-                instructions=meal.get('Instructions', ''),
-                diet_type=meal.get('DietType', 'Unknown')
-            ))
-        
-        # Calculate accuracy
-        if calorie_target == 0:
-            calorie_accuracy = 100.0 if meal_plan.total_calories == 0 else 0.0
-        else:
-            calorie_accuracy = 100 - abs((meal_plan.total_calories - calorie_target) / calorie_target * 100)
-        
-        # Create complete response
-        complete_plan = CompleteMealPlan(
-            user_profile={
-                'age': user_profile.age,
-                'weight': user_profile.weight,
-                'height': user_profile.height,
-                'sex': user_profile.sex.value,
-                'activity_level': user_profile.activity_level.value,
-                'goal': user_profile.goal.value,
-                'diet_type': user_profile.diet_type,
-                'allergies': user_profile.allergies
-            },
-            bmr=round(bmr, 2),
-            tdee=round(tdee, 2),
-            calorie_target=round(calorie_target, 2),
-            macros={
-                'protein': macros.protein_grams,
-                'carbohydrates': macros.carb_grams,
-                'fat': macros.fat_grams
-            },
-            macro_percentages={
-                'protein': macros.protein_percentage,
-                'carbohydrates': macros.carb_percentage,
-                'fat': macros.fat_percentage
-            },
-            meals=formatted_meals,
-            meal_count=meal_plan.meal_count,
-            total_calories=meal_plan.total_calories,
-            total_protein=meal_plan.total_protein,
-            total_carbs=meal_plan.total_carbs,
-            total_fat=meal_plan.total_fat,
-            calorie_accuracy=round(calorie_accuracy, 2),
-            goal=user_profile.goal.value,
-            activity_level=user_profile.activity_level.value
+        # Build and return response using shared helper
+        return _build_meal_plan_response(
+            user_profile=user_profile,
+            bmr=bmr,
+            tdee=tdee,
+            calorie_target=calorie_target,
+            macros=macros,
+            meal_plan=meal_plan
         )
-        
-        return complete_plan
         
     except Exception as e:
         raise HTTPException(
@@ -486,6 +473,9 @@ def get_daily_meal_distribution(
     Returns:
         Dict[str, Dict[str, float]]: Meal type -> calorie range
         
+    Raises:
+        ValueError: If meal_count is invalid (<=0)
+        
     Example:
         >>> distribution = get_daily_meal_distribution(2000, 3)
         >>> print(distribution)
@@ -495,6 +485,10 @@ def get_daily_meal_distribution(
             'dinner': {'min': 600, 'max': 700}
         }
     """
+    # Validate meal_count to prevent division by zero
+    if meal_count <= 0:
+        raise ValueError(f"meal_count must be > 0, got {meal_count}")
+    
     if meal_count == 3:
         return {
             'breakfast': {'min': calorie_target * 0.25, 'max': calorie_target * 0.30},

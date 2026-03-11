@@ -120,7 +120,8 @@ def filter_by_diet(foods: List[Dict], diet_type: Optional[str] = None) -> List[D
         
         elif normalized_diet == 'vegan':
             # Exclude anything with non-vegan ingredients
-            if diet_type_field == 'vegetarian' or diet_type_field == 'unknown':
+            # Accept foods marked as vegan, vegetarian, or unknown, then check ingredients
+            if diet_type_field in ('vegan', 'vegetarian', 'unknown'):
                 # Check for dairy and animal products
                 has_non_vegan = any(
                     re.search(r'\b' + re.escape(keyword) + r'\b', ingredients)
@@ -210,13 +211,12 @@ def get_meals_by_calorie_range(
 
 
 def split_calories_by_meal_type(
-    total_calories: float,
-    meal_count: int = 4
+    total_calories: float
 ) -> Dict[str, float]:
     """
     Split daily calories into meal types with exact calorie targets.
     
-    Fixed 4-meal distribution:
+    Always returns fixed 4-meal distribution:
     - Breakfast: 25% of daily calories
     - Lunch: 35% of daily calories 
     - Dinner: 30% of daily calories
@@ -224,13 +224,12 @@ def split_calories_by_meal_type(
     
     Args:
         total_calories (float): Total daily calorie target
-        meal_count (int): Number of meals per day (always 4)
     
     Returns:
         Dict[str, float]: Meal type -> target_calories
         
     Example:
-        >>> targets = split_calories_by_meal_type(2000, 4)
+        >>> targets = split_calories_by_meal_type(2000)
         >>> print(targets)
         {'breakfast': 500.0, 'lunch': 700.0, 'dinner': 600.0, 'snack': 200.0}
     """
@@ -452,7 +451,7 @@ def generate_macro_aware_meal_plan(
             raise ValueError(f"No foods available after applying filters")
         
         # Get calorie targets for each meal
-        meal_calorie_targets = split_calories_by_meal_type(calorie_target, 4)
+        meal_calorie_targets = split_calories_by_meal_type(calorie_target)
         
         # Distribute macro targets proportionally across meals
         meal_order = ['breakfast', 'lunch', 'dinner', 'snack']
@@ -682,7 +681,7 @@ def generate_structured_meal_plan(
             raise ValueError(f"No foods available after applying filters (diet: {diet_type}, allergies: {allergies})")
         
         # Get calorie targets for each meal
-        meal_targets = split_calories_by_meal_type(calorie_target, 4)
+        meal_targets = split_calories_by_meal_type(calorie_target)
         
         # Track selected meals
         selected_meals = {}

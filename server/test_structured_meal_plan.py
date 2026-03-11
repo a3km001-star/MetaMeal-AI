@@ -58,12 +58,14 @@ if __name__ == "__main__":
         meal_types = ["Breakfast (25%)", "Lunch (35%)", "Dinner (30%)", "Snack (10%)"]
         expected_percentages = [0.25, 0.35, 0.30, 0.10]
         
-        for i, meal in enumerate(meal_plan.meals):
-            expected_cals = meal_plan.calorie_target * expected_percentages[i]
+        # Safely iterate by zipping meals with meal types and percentages
+        for meal, meal_type, pct in zip(meal_plan.meals, meal_types, expected_percentages):
+            expected_cals = meal_plan.calorie_target * pct
             actual_cals = meal.calories
-            deviation = ((actual_cals - expected_cals) / expected_cals) * 100
+            # Safe division to prevent ZeroDivisionError
+            deviation = ((actual_cals - expected_cals) / expected_cals * 100) if expected_cals > 0 else 0.0
             
-            print(f"\n{meal_types[i]}")
+            print(f"\n{meal_type}")
             print(f"  Name: {meal.name}")
             print(f"  Expected: {expected_cals:.0f} kcal")
             print(f"  Actual: {actual_cals:.0f} kcal ({deviation:+.1f}% deviation)")

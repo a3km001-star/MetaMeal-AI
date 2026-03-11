@@ -28,8 +28,20 @@ def clean_dataset(input_file: str = "Dataset.csv", output_file: str = "cleaned_f
     try:
         # Get the directory of this script
         script_dir = Path(__file__).parent
-        input_path = script_dir / input_file
-        output_path = script_dir / output_file
+        
+        # Handle absolute vs relative paths
+        input_file_path = Path(input_file).expanduser()
+        output_file_path = Path(output_file).expanduser()
+        
+        if input_file_path.is_absolute():
+            input_path = input_file_path
+        else:
+            input_path = script_dir / input_file
+        
+        if output_file_path.is_absolute():
+            output_path = output_file_path
+        else:
+            output_path = script_dir / output_file
         
         # Check if input file exists
         if not input_path.exists():
@@ -88,9 +100,11 @@ def clean_dataset(input_file: str = "Dataset.csv", output_file: str = "cleaned_f
         print("\n=== Missing Values Analysis ===")
         columns_to_check = [col for col in df.columns if col != 'DietType']
         missing_counts = df[columns_to_check].isnull().sum()
+        total_rows = len(df)
         for col, count in missing_counts.items():
             if count > 0:
-                print(f"{col}: {count} missing values ({count/len(df)*100:.1f}%)")
+                percent = (count / total_rows * 100) if total_rows > 0 else 0.0
+                print(f"{col}: {count} missing values ({percent:.1f}%)")
         
         # Remove rows with missing values in critical columns
         critical_columns = ['RecipeName', 'Calories', 'Protein', 'Carbohydrates', 'Fat', 'Ingredients']

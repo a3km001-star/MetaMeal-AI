@@ -91,7 +91,7 @@ For each meal slot (Breakfast → Lunch → Dinner → Snack):
    - Adjust based on what's already been selected
 
 2. **Filter candidates**
-   - Include meals within calorie range (±15% initially)
+   - Include meals within calorie range (±10% tolerance)
    - Exclude already-used recipes
    - Ensure diet restrictions and allergies
 
@@ -164,8 +164,8 @@ return best_plan
 ### Step 4: Snack (10% = 200 kcal)
 
 - Remaining: 220 kcal, 15g P, 25g C, 7g F
-- Target exactly what's remaining
-- Best fitting meal selected
+- Target for meal: 200 kcal (10% of daily target)
+- Best fitting meal selected: 170 kcal, 13g P, 23g C, 6g F
 - **Final:** 1950 kcal (-2.5%), 148g P (-1.3%), 198g C (-1.0%), 64g F (-1.5%)
 
 ## Comparison: Random vs Greedy

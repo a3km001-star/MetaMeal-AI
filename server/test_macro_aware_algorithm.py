@@ -17,6 +17,17 @@ from services.nutrition_engine.meal_planner import UserProfile, create_meal_plan
 from services.nutrition_engine.metabolic_calculator import Sex, ActivityLevel, FitnessGoal
 
 
+def safe_deviation(actual: float, target: float) -> float:
+    """Calculate percentage deviation with safe division.
+    
+    Returns 0.0 if target is 0 and actual is also 0.
+    Returns float('inf') if target is 0 but actual is not.
+    """
+    if target == 0:
+        return 0.0 if actual == 0 else float('inf')
+    return ((actual - target) / target) * 100
+
+
 def display_macro_comparison(meal_plan):
     """Display how close macros are to targets."""
     print("\n" + "=" * 70)
@@ -33,10 +44,10 @@ def display_macro_comparison(meal_plan):
     actual_carbs = meal_plan.total_carbs
     actual_fat = meal_plan.total_fat
     
-    # Calculate deviations
-    protein_dev = ((actual_protein - target_protein) / target_protein) * 100
-    carbs_dev = ((actual_carbs - target_carbs) / target_carbs) * 100
-    fat_dev = ((actual_fat - target_fat) / target_fat) * 100
+    # Calculate deviations with safe division
+    protein_dev = safe_deviation(actual_protein, target_protein)
+    carbs_dev = safe_deviation(actual_carbs, target_carbs)
+    fat_dev = safe_deviation(actual_fat, target_fat)
     
     print(f"\nProtein:")
     print(f"  Target:  {target_protein:.1f}g")
