@@ -32,6 +32,8 @@ from services.nutrition_engine.macro_split import (
 )
 from services.nutrition_engine.constraint_solver import (
     generate_meal_plan,
+    generate_structured_meal_plan,
+    generate_macro_aware_meal_plan,
     filter_by_diet,
     filter_by_allergies,
     validate_meal_plan,
@@ -47,9 +49,8 @@ class UserProfile(BaseModel):
     sex: Sex = Field(..., description="Biological sex (male/female)")
     activity_level: ActivityLevel = Field(..., description="Physical activity level")
     goal: FitnessGoal = Field(..., description="Fitness goal")
-    diet_type: Optional[str] = Field(None, description="Diet preference (e.g., 'Vegetarian', 'Non-Vegetarian')")
+    diet_type: Optional[str] = Field(None, description="Diet preference: 'veg' (vegetarian), 'non_veg' (non-vegetarian), or 'vegan'")
     allergies: Optional[List[str]] = Field(default_factory=list, description="List of allergens to avoid")
-    max_meals: Optional[int] = Field(4, ge=3, le=6, description="Maximum number of meals per day")
     
     @validator('weight')
     def validate_weight(cls, v):
@@ -113,16 +114,27 @@ def create_meal_plan(user_profile: UserProfile) -> CompleteMealPlan:
     Create a complete meal plan for a user based on their profile.
     
     This is the master orchestrator function that combines all nutrition
-    engine modules to generate a personalized meal plan.
+    engine modules to generate a personalized meal plan with exactly 4 meals:
+    - Breakfast: 25% of daily calories
+    - Lunch: 35% of daily calories
+    - Dinner: 30% of daily calories
+    - Snack: 10% of daily calories
+    
+    Uses GREEDY MACRO-AWARE OPTIMIZATION:
+    - Keeps calorie deviation within ±10%
+    - Tracks and optimizes macro totals (protein, carbs, fat)
+    - Scores meals based on how well they fit remaining targets
+    - Selects meals that minimize macro deviation
+    - Avoids simple random selection
     
     Workflow:
     1. Load food dataset
     2. Calculate BMR (Basal Metabolic Rate)
     3. Calculate TDEE (Total Daily Energy Expenditure)
     4. Adjust for fitness goal
-    5. Calculate macro targets
+    5. Calculate macro targets based on goal and weight
     6. Filter meals by diet preferences and allergies
-    7. Generate meal plan using constraint solver
+    7. Generate optimized 4-meal plan using greedy algorithm
     8. Format and return structured response
     
     Args:
@@ -130,7 +142,7 @@ def create_meal_plan(user_profile: UserProfile) -> CompleteMealPlan:
                                     sex, activity level, goal, preferences
     
     Returns:
-        CompleteMealPlan: Complete meal plan with nutritional breakdown
+        CompleteMealPlan: Complete meal plan with 4 meals and nutritional breakdown
         
     Raises:
         HTTPException: If meal plan generation fails
@@ -140,11 +152,13 @@ def create_meal_plan(user_profile: UserProfile) -> CompleteMealPlan:
         ...     age=25, weight=70, height=175, sex=Sex.MALE,
         ...     activity_level=ActivityLevel.MODERATELY_ACTIVE,
         ...     goal=FitnessGoal.MUSCLE_GAIN,
-        ...     diet_type="Vegetarian",
+        ...     diet_type="veg",  # Options: "veg", "non_veg", "vegan"
         ...     allergies=["milk"]
         ... )
         >>> plan = create_meal_plan(profile)
         >>> print(f"Generated {plan.meal_count} meals for {plan.calorie_target} kcal/day")
+        >>> # Returns: Breakfast (25%), Lunch (35%), Dinner (30%), Snack (10%)
+        >>> # With optimized macros close to targets
     """
     try:
         # Step 1: Load food dataset
@@ -178,15 +192,21 @@ def create_meal_plan(user_profile: UserProfile) -> CompleteMealPlan:
             weight_kg=user_profile.weight
         )
         
-        # Step 6 & 7: Generate meal plan with filters
-        meal_plan = generate_meal_plan(
+        # Step 6 & 7: Generate macro-aware meal plan using greedy optimization
+        # - Fixed 4-meal distribution: Breakfast 25%, Lunch 35%, Dinner 30%, Snack 10%
+        # - Keeps calorie deviation within ±10%
+        # - Optimizes for macro targets (protein, carbs, fat)
+        # - Uses greedy algorithm to select meals that minimize macro deviation
+        meal_plan = generate_macro_aware_meal_plan(
             foods=foods,
             calorie_target=calorie_target,
+            protein_target=macros.protein_grams,
+            carb_target=macros.carb_grams,
+            fat_target=macros.fat_grams,
             diet_type=user_profile.diet_type,
             allergies=user_profile.allergies or [],
-            max_meals=user_profile.max_meals or 4,
-            calorie_tolerance=0.20,  # Allow 20% deviation for more flexibility
-            max_attempts=150  # Increase attempts for better results
+            calorie_tolerance=0.10,  # ±10% calorie deviation
+            max_attempts=100  # Optimization attempts for best macro balance
         )
         
         # Step 8: Format meals into response structure
@@ -371,16 +391,18 @@ def regenerate_meal_plan_with_changes(
             weight_kg=user_profile.weight
         )
         
-        # Generate new meal plan with filtered/sorted foods
-        meal_plan = generate_meal_plan(
+        # Generate new macro-aware meal plan
+        # Note: prefer_high_protein sorting is already done on foods list
+        meal_plan = generate_macro_aware_meal_plan(
             foods=foods,
             calorie_target=calorie_target,
+            protein_target=macros.protein_grams,
+            carb_target=macros.carb_grams,
+            fat_target=macros.fat_grams,
             diet_type=user_profile.diet_type,
             allergies=user_profile.allergies or [],
-            max_meals=user_profile.max_meals or 4,
-            calorie_tolerance=0.20,  # Allow 20% deviation for flexibility
-            max_attempts=150,
-            shuffle=not prefer_high_protein  # Don't shuffle if we sorted by preference
+            calorie_tolerance=0.10,
+            max_attempts=100
         )
         
         # Format meals into response structure
