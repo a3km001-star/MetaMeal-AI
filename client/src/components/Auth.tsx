@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState, useActionState, use } from "react";
+import axios from "axios";
+import { Autocomplete, Chip, TextField } from "@mui/material";
 import {
   Mail,
   Lock,
@@ -9,8 +11,248 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
-import { registerUser } from "../api/auth";
-import type { AuthMode } from "../types";
+
+const allergyOptions = [
+  "Amaranth",
+  "Bajra",
+  "Barley",
+  "Jowar",
+  "Maize",
+  "Quinoa",
+  "Ragi",
+  "Rice",
+  "Samai",
+  "Varagu",
+  "Wheat",
+  "Bengal gram",
+  "Black gram",
+  "Cowpea",
+  "Field bean",
+  "Green gram",
+  "Horse gram",
+  "Lentil",
+  "Moth bean",
+  "Peas",
+  "Rajmah",
+  "Red gram",
+  "Ricebean",
+  "Soya bean",
+  "Agathi leaves",
+  "Amaranth leaves",
+  "Basella leaves",
+  "Bathua leaves",
+  "Beet greens",
+  "Betel leaves",
+  "Brussels sprouts",
+  "Cabbage",
+  "Cauliflower leaves",
+  "Colocasia leaves",
+  "Drumstick leaves",
+  "Fenugreek leaves",
+  "Garden cress",
+  "Gogu leaves",
+  "Knol-Khol leaves",
+  "Lettuce",
+  "Mustard leaves",
+  "Pak Choi leaves",
+  "Parsley",
+  "Ponnaganni",
+  "Pumpkin leaves",
+  "Radish leaves",
+  "Rumex leaves",
+  "Spinach",
+  "Tamarind leaves",
+  "Ash gourd",
+  "Bamboo shoot",
+  "Bean scarlet",
+  "Bitter gourd",
+  "Bottle gourd",
+  "Brinjal",
+  "Broad beans",
+  "Capsicum",
+  "Cauliflower",
+  "Celery",
+  "Cho-cho-marrow",
+  "Cluster beans",
+  "Colocasia stem",
+  "Corn",
+  "Cucumber",
+  "Drumstick",
+  "Field beans",
+  "French beans",
+  "Jack fruit",
+  "Knol-Khol",
+  "Kovai",
+  "Ladies finger",
+  "Mango",
+  "Onion stalk",
+  "Papaya",
+  "Parwar",
+  "Plantain",
+  "Pumpkin",
+  "Ridge gourd",
+  "Snake gourd",
+  "Tinda",
+  "Tomato",
+  "Zucchini",
+  "Apple",
+  "Apricot",
+  "Avocado",
+  "Bael",
+  "Banana",
+  "Blackberry",
+  "Cherries",
+  "Currants",
+  "Custard apple",
+  "Dates",
+  "Fig",
+  "Gooseberry",
+  "Grapes",
+  "Guava",
+  "Jambu fruit",
+  "Karonda",
+  "Lemon",
+  "Lime",
+  "Litchi",
+  "Mangosteen",
+  "Manila tamarind",
+  "Musk melon",
+  "Orange",
+  "Palm fruit",
+  "Peach",
+  "Pear",
+  "Phalsa",
+  "Pineapple",
+  "Plum",
+  "Pomegranate",
+  "Pummelo",
+  "Raisins",
+  "Rambutan",
+  "Sapota",
+  "Soursop",
+  "Star fruit",
+  "Strawberry",
+  "Tamarind",
+  "Watermelon",
+  "Wood apple",
+  "Zizyphus",
+  "Beetroot",
+  "Carrot",
+  "Colocasia",
+  "Lotus root",
+  "Potato",
+  "Radish",
+  "Sweet potato",
+  "Tapioca",
+  "Water chestnut",
+  "Yam",
+  "Chillies",
+  "Coriander leaves",
+  "Curry leaves",
+  "Garlic",
+  "Ginger",
+  "Mango ginger",
+  "Mint leaves",
+  "Onion",
+  "Asafoetida",
+  "Cardamom",
+  "Cloves",
+  "Coriander seeds",
+  "Cumin seeds",
+  "Fenugreek seeds",
+  "Mace",
+  "Nutmeg",
+  "Omum",
+  "Pippali",
+  "Pepper",
+  "Poppy seeds",
+  "Turmeric",
+  "Almond",
+  "Arecanut",
+  "Cashew nut",
+  "Coconut",
+  "Gingelly seeds",
+  "Groundnut",
+  "Mustard seeds",
+  "Linseeds",
+  "Niger seeds",
+  "Pine seed",
+  "Pistachio",
+  "Safflower seeds",
+  "Sunflower seeds",
+  "Walnut",
+  "Jaggery",
+  "Sugarcane",
+  "Mushroom",
+  "Toddy",
+  "Coconut water",
+  "Milk",
+  "Paneer",
+  "Khoa",
+  "Egg",
+  "Chicken",
+  "Country hen",
+  "Duck",
+  "Quail",
+  "Turkey",
+  "Goat",
+  "Sheep",
+  "Beef",
+  "Calf",
+  "Mithun",
+  "Pork",
+  "Hare",
+  "Rabbit",
+  "Fish",
+  "Anchovy",
+  "Betki",
+  "Black snapper",
+  "Bombay duck",
+  "Cat fish",
+  "Hilsa",
+  "Mackerel",
+  "Milk fish",
+  "Mullet",
+  "Pomfret",
+  "Red snapper",
+  "Salmon",
+  "Sardine",
+  "Shark",
+  "Silver carp",
+  "Sole fish",
+  "Stingray",
+  "Tilapia",
+  "Tuna",
+  "Vanjaram",
+  "Crab",
+  "Lobster",
+  "Mud crab",
+  "Oyster",
+  "Prawns",
+  "Clam",
+  "Octopus",
+  "Squid",
+  "Catla",
+  "Freshwater eel",
+  "Gold fish",
+  "Pangas",
+  "Rohu",
+  "Coconut oil",
+  "Corn oil",
+  "Cotton seed oil",
+  "Gingelly oil",
+  "Groundnut oil",
+  "Mustard oil",
+  "Palm oil",
+  "Rice bran oil",
+  "Safflower oil",
+  "Soyabean oil",
+  "Sunflower oil",
+  "Ghee",
+  "Vanaspati",
+];
+
+type AuthMode = "login" | "register";
 
 interface AuthProps {
   onLogin: (name: string) => void;
@@ -19,88 +261,184 @@ interface AuthProps {
   toggleDarkMode: () => void;
 }
 
+interface RegisterFormState {
+  error: string | null;
+  success: boolean;
+}
+
+interface InputFieldProps {
+  label: string;
+  icon: React.ReactNode;
+  type?: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  required?: boolean;
+  min?: number;
+  max?: number;
+  step?: number;
+  minLength?: number;
+}
+
+function InputField({
+  label,
+  icon,
+  type = "text",
+  value,
+  onChange,
+  placeholder,
+  required,
+  min,
+  max,
+  step,
+  minLength,
+}: InputFieldProps) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        {label}
+      </label>
+      <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none">
+          {icon}
+        </span>
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+          placeholder={placeholder}
+          required={required}
+          min={min}
+          max={max}
+          step={step}
+          minLength={minLength}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface SelectFieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+  children: React.ReactNode;
+}
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  required,
+  children,
+}: SelectFieldProps) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        {label}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+        required={required}
+      >
+        {children}
+      </select>
+    </div>
+  );
+}
+
 function Auth({
   onLogin,
   initialMode = "login",
   darkMode,
   toggleDarkMode,
 }: AuthProps) {
-  const [isSignIn, setIsSignIn] = useState<boolean>(initialMode === "login");
+  const [isSignIn, setIsSignIn] = useState(initialMode === "login");
 
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
+  // shared fields
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const [name, setName] = useState<string>("");
-  const [age, setAge] = useState<string>("");
-  const [height, setHeight] = useState<string>("");
-  const [weight, setWeight] = useState<string>("");
-  const [workoutExperience, setWorkoutExperience] = useState<string>("");
-  const [dietPreference, setDietPreference] = useState<string>("");
-  const [goal, setGoal] = useState<string>("");
-  const [activityLevel, setActivityLevel] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [rememberMe, setRememberMe] = useState<boolean>(() => {
-    const saved = localStorage.getItem("rememberMe");
-    if (!saved) return false;
-    try {
-      return JSON.parse(saved) as boolean;
-    } catch {
-      return false;
-    }
-  });
-  const [error, setError] = useState<string>("");
+  // register-only fields
+  const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+  const [height, setHeight] = useState("");
+  const [weight, setWeight] = useState("");
+  const [gender, setGender] = useState("");
+  const [workoutExperience, setWorkoutExperience] = useState("");
+  const [dietPreference, setDietPreference] = useState("");
+  const [goal, setGoal] = useState("");
+  const [activityLevel, setActivityLevel] = useState("");
+  const [allergies, setAllergies] = useState<string[]>([]);
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  useEffect(() => {
-    localStorage.setItem("rememberMe", JSON.stringify(rememberMe));
-    if (!rememberMe) {
-      localStorage.removeItem("rememberedEmail");
-    }
-  }, [rememberMe]);
-
-  useEffect(() => {
-    if (rememberMe) {
-      const savedEmail = localStorage.getItem("rememberedEmail");
-      if (savedEmail) {
-        setEmail(savedEmail);
-      }
-    }
-  }, []);
-
-  const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>,
-  ): Promise<void> => {
-    e.preventDefault();
-    setError("");
-    if (rememberMe) {
-      localStorage.setItem("rememberedEmail", email);
-    } else {
-      localStorage.removeItem("rememberedEmail");
-    }
-    if (isSignIn) {
-      onLogin(email.split("@")[0] || "User");
-    } else {
+  // useActionState replaces manual loading/error state management
+  const [registerState, registerAction, isRegisterPending] = useActionState<
+    RegisterFormState,
+    FormData
+  >(
+    async (_prevState, _formData) => {
       if (password !== confirmPassword) {
-        setError("Passwords do not match.");
-        return;
+        return { error: "Passwords do not match!", success: false };
       }
       try {
-        await registerUser({
+        await axios.post("http://localhost:3001/register", {
           name,
           email,
           password,
           age,
           height,
           weight,
+          gender,
           workoutExperience,
           dietPreference,
           goal,
           activityLevel,
+          allergies,
         });
         onLogin(name);
+        return { error: null, success: true };
       } catch {
-        setError("Registration failed. Please try again.");
+        return {
+          error: "Registration failed. Please try again.",
+          success: false,
+        };
       }
-    }
+    },
+    { error: null, success: false },
+  );
+
+  function handleSignIn(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    onLogin(email.split("@")[0] || "User");
+  }
+
+  const allergyAutocompleteStyles = {
+    "& .MuiOutlinedInput-root": {
+      color: darkMode ? "#fff" : "#000",
+      bgcolor: darkMode ? "#374151" : "#fff",
+      "& fieldset": {
+        borderColor: darkMode ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.23)",
+      },
+      "&:hover fieldset": {
+        borderColor: darkMode ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)",
+      },
+      "&.Mui-focused fieldset": {
+        borderColor: darkMode ? "#60A5FA" : "#3b82f6",
+      },
+    },
+    "& .MuiInputLabel-root": {
+      color: darkMode ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.7)",
+    },
+  };
+
+  const dropdownSx = {
+    bgcolor: darkMode ? "#1f2937" : "#fff",
+    color: darkMode ? "#fff" : "#000",
   };
 
   return (
@@ -125,7 +463,7 @@ function Auth({
         </div>
 
         <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-white mb-2">
-          Welcome to MetaMeal AI
+          Welcome to MetaMeal
         </h1>
         <p className="text-center text-gray-600 dark:text-gray-400 mb-8">
           Your personal nutrition companion
@@ -154,240 +492,37 @@ function Auth({
           </button>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-4 max-h-[60vh] overflow-y-auto px-2"
-        >
-          {!isSignIn && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                    placeholder="Enter your full name"
-                    required
-                  />
-                </div>
-              </div>
+        {/* Error message from register action */}
+        {registerState.error && (
+          <p className="text-red-500 text-sm text-center mb-4">
+            {registerState.error}
+          </p>
+        )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Age
-                  </label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="number"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                      placeholder="Age"
-                      required
-                      min="13"
-                      max="120"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Height (cm)
-                  </label>
-                  <div className="relative">
-                    <Ruler className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="number"
-                      value={height}
-                      onChange={(e) => setHeight(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                      placeholder="Height"
-                      required
-                      min="100"
-                      max="250"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Weight (kg)
-                </label>
-                <div className="relative">
-                  <Scale className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="number"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                    placeholder="Enter your weight"
-                    required
-                    min="30"
-                    max="300"
-                    step="0.1"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Workout Experience Level
-                </label>
-                <select
-                  value={workoutExperience}
-                  onChange={(e) => setWorkoutExperience(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                  required
-                >
-                  <option value="">Select experience level</option>
-                  <option value="beginner">Beginner (0-6 months)</option>
-                  <option value="intermediate">
-                    Intermediate (6 months - 2 years)
-                  </option>
-                  <option value="advanced">Advanced (2+ years)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Diet Preference
-                </label>
-                <select
-                  value={dietPreference}
-                  onChange={(e) => setDietPreference(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                  required
-                >
-                  <option value="">Select diet preference</option>
-                  <option value="balanced">Balanced</option>
-                  <option value="vegetarian">Vegetarian</option>
-                  <option value="vegan">Vegan</option>
-                  <option value="keto">Keto</option>
-                  <option value="paleo">Paleo</option>
-                  <option value="low-carb">Low Carb</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Fitness Goal
-                </label>
-                <select
-                  value={goal}
-                  onChange={(e) => setGoal(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                  required
-                >
-                  <option value="">Select your goal</option>
-                  <option value="weight-loss">Weight Loss</option>
-                  <option value="weight-gain">Weight Gain</option>
-                  <option value="maintain">Maintain Weight</option>
-                  <option value="muscle-gain">Muscle Gain</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Activity Level
-                </label>
-                <select
-                  value={activityLevel}
-                  onChange={(e) => setActivityLevel(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                  required
-                >
-                  <option value="">Select activity level</option>
-                  <option value="sedentary">
-                    Sedentary (Little to no exercise)
-                  </option>
-                  <option value="light">Lightly Active (1-3 days/week)</option>
-                  <option value="moderate">
-                    Moderately Active (3-5 days/week)
-                  </option>
-                  <option value="very-active">
-                    Very Active (6-7 days/week)
-                  </option>
-                  <option value="extra-active">
-                    Extra Active (Physical job + exercise)
-                  </option>
-                </select>
-              </div>
-            </>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="Enter your email"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="Enter your password"
-                required
-                minLength={6}
-              />
-            </div>
-          </div>
-
-          {!isSignIn && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                  placeholder="Confirm your password"
-                  required
-                  minLength={6}
-                />
-              </div>
-            </div>
-          )}
-
-          {isSignIn && (
+        {isSignIn ? (
+          <form onSubmit={handleSignIn} className="space-y-4">
+            <InputField
+              label="Email"
+              icon={<Mail className="w-5 h-5" />}
+              type="email"
+              value={email}
+              onChange={setEmail}
+              placeholder="Enter your email"
+              required
+            />
+            <InputField
+              label="Password"
+              icon={<Lock className="w-5 h-5" />}
+              type="password"
+              value={password}
+              onChange={setPassword}
+              placeholder="Enter your password"
+              required
+              minLength={6}
+            />
             <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center">
-                <input
-                  id="remember-me"
-                  type="checkbox"
-                  className="mr-2"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                />
+              <label className="flex items-center gap-2">
+                <input type="checkbox" />
                 <span className="text-gray-600 dark:text-gray-300">
                   Remember me
                 </span>
@@ -399,19 +534,221 @@ function Auth({
                 Forgot password?
               </a>
             </div>
-          )}
-
-          {error ? (
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-          ) : null}
-
-          <button
-            type="submit"
-            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all"
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all"
+            >
+              Sign In
+            </button>
+          </form>
+        ) : (
+          // React 19 form action wired to useActionState
+          <form
+            action={registerAction}
+            className="space-y-4 max-h-[60vh] overflow-y-auto px-2"
           >
-            {isSignIn ? "Sign In" : "Create Account"}
-          </button>
-        </form>
+            <InputField
+              label="Full Name"
+              icon={<User className="w-5 h-5" />}
+              value={name}
+              onChange={setName}
+              placeholder="Enter your full name"
+              required
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <InputField
+                label="Age"
+                icon={<Calendar className="w-5 h-5" />}
+                type="number"
+                value={age}
+                onChange={setAge}
+                placeholder="Age"
+                required
+                min={13}
+                max={120}
+              />
+              <InputField
+                label="Height (cm)"
+                icon={<Ruler className="w-5 h-5" />}
+                type="number"
+                value={height}
+                onChange={setHeight}
+                placeholder="Height"
+                required
+                min={100}
+                max={250}
+              />
+            </div>
+
+            <SelectField
+              label="Gender"
+              value={gender}
+              onChange={setGender}
+              required
+            >
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </SelectField>
+
+            <InputField
+              label="Weight (kg)"
+              icon={<Scale className="w-5 h-5" />}
+              type="number"
+              value={weight}
+              onChange={setWeight}
+              placeholder="Enter your weight"
+              required
+              min={30}
+              max={300}
+              step={0.1}
+            />
+
+            <SelectField
+              label="Workout Experience Level"
+              value={workoutExperience}
+              onChange={setWorkoutExperience}
+              required
+            >
+              <option value="">Select experience level</option>
+              <option value="beginner">Beginner (0-6 months)</option>
+              <option value="intermediate">
+                Intermediate (6 months - 2 years)
+              </option>
+              <option value="advanced">Advanced (2+ years)</option>
+            </SelectField>
+
+            <SelectField
+              label="Diet Preference"
+              value={dietPreference}
+              onChange={setDietPreference}
+              required
+            >
+              <option value="">Select diet preference</option>
+              <option value="balanced">Balanced</option>
+              <option value="vegetarian">Vegetarian</option>
+              <option value="vegan">Vegan</option>
+              <option value="keto">Keto</option>
+              <option value="paleo">Paleo</option>
+              <option value="low-carb">Low Carb</option>
+            </SelectField>
+
+            <Autocomplete
+              multiple
+              options={allergyOptions}
+              value={allergies}
+              onChange={(_event, newValue) => setAllergies(newValue)}
+              disableCloseOnSelect
+              filterSelectedOptions
+              getOptionLabel={(option) => option}
+              slotProps={{
+                paper: { sx: dropdownSx },
+                listbox: { sx: dropdownSx },
+              }}
+              renderTags={(value, getTagProps) =>
+                value.map((option, index) => (
+                  <Chip
+                    variant="outlined"
+                    label={option}
+                    {...getTagProps({ index })}
+                    key={option}
+                    sx={{
+                      color: darkMode ? "#fff" : "inherit",
+                      bgcolor: darkMode ? "rgba(255,255,255,0.12)" : "inherit",
+                      borderColor: darkMode
+                        ? "rgba(255,255,255,0.3)"
+                        : "inherit",
+                    }}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Allergies (optional)"
+                  placeholder="Start typing to search"
+                  variant="outlined"
+                  size="small"
+                  sx={allergyAutocompleteStyles}
+                />
+              )}
+            />
+
+            <SelectField
+              label="Fitness Goal"
+              value={goal}
+              onChange={setGoal}
+              required
+            >
+              <option value="">Select your goal</option>
+              <option value="weight-loss">Weight Loss</option>
+              <option value="weight-gain">Weight Gain</option>
+              <option value="maintain">Maintain Weight</option>
+              <option value="muscle-gain">Muscle Gain</option>
+            </SelectField>
+
+            <SelectField
+              label="Activity Level"
+              value={activityLevel}
+              onChange={setActivityLevel}
+              required
+            >
+              <option value="">Select activity level</option>
+              <option value="sedentary">
+                Sedentary (Little to no exercise)
+              </option>
+              <option value="light">Lightly Active (1-3 days/week)</option>
+              <option value="moderate">
+                Moderately Active (3-5 days/week)
+              </option>
+              <option value="very-active">Very Active (6-7 days/week)</option>
+              <option value="extra-active">
+                Extra Active (Physical job + exercise)
+              </option>
+            </SelectField>
+
+            <InputField
+              label="Email"
+              icon={<Mail className="w-5 h-5" />}
+              type="email"
+              value={email}
+              onChange={setEmail}
+              placeholder="Enter your email"
+              required
+            />
+
+            <InputField
+              label="Password"
+              icon={<Lock className="w-5 h-5" />}
+              type="password"
+              value={password}
+              onChange={setPassword}
+              placeholder="Enter your password"
+              required
+              minLength={6}
+            />
+
+            <InputField
+              label="Confirm Password"
+              icon={<Lock className="w-5 h-5" />}
+              type="password"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              placeholder="Confirm your password"
+              required
+              minLength={6}
+            />
+
+            <button
+              type="submit"
+              disabled={isRegisterPending}
+              className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+            >
+              {isRegisterPending ? "Creating Account..." : "Create Account"}
+            </button>
+          </form>
+        )}
 
         <p className="text-center text-gray-600 dark:text-gray-400 text-sm mt-6">
           {isSignIn ? "Don't have an account? " : "Already have an account? "}
