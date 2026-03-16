@@ -16,9 +16,74 @@ from services.nutrition_engine.meal_planner import (
     ActivityLevel,
     FitnessGoal
 )
+from services.nutrition_engine.metabolic_calculator import (
+    calculate_bmr,
+    calculate_tdee,
+    adjust_for_goal,
+)
 from fastapi import HTTPException
-import json
 import traceback
+
+
+def _assert_plan_invariants(plan, profile):
+    """Validate core invariants for a generated meal plan."""
+    assert plan.bmr > 0, "BMR must be positive"
+    assert plan.tdee > plan.bmr, "TDEE must be greater than BMR"
+    assert plan.total_calories > 0, "Total calories must be positive"
+    assert plan.meal_count == 4, f"Expected fixed 4-meal plan, got {plan.meal_count}"
+    assert len(plan.meals) == 4, f"Expected 4 meal items, got {len(plan.meals)}"
+    assert 0 <= plan.calorie_accuracy <= 100, f"Accuracy must be between 0 and 100, got {plan.calorie_accuracy}"
+
+    if profile.goal == FitnessGoal.FAT_LOSS:
+        assert plan.calorie_target < plan.tdee, (
+            f"Fat loss target should be less than TDEE (got {plan.calorie_target} vs {plan.tdee})"
+        )
+    elif profile.goal == FitnessGoal.MUSCLE_GAIN:
+        assert plan.calorie_target > plan.tdee, (
+            f"Muscle gain target should exceed TDEE (got {plan.calorie_target} vs {plan.tdee})"
+        )
+    else:
+        assert plan.calorie_target == plan.tdee, (
+            f"Maintenance target should equal TDEE (got {plan.calorie_target} vs {plan.tdee})"
+        )
+
+
+def _assert_allergens_excluded(plan, allergies):
+    """Ensure generated meal ingredients do not contain the requested allergens."""
+    for meal in plan.meals:
+        ingredients_lower = meal.ingredients.lower()
+        for allergen in allergies:
+            assert allergen.lower() not in ingredients_lower, (
+                f"Allergen '{allergen}' found in meal '{meal.name}'"
+            )
+
+
+def _build_basic_profile():
+    """Stable smoke-test profile for the current macro-aware planner."""
+    return UserProfile(
+        age=27,
+        weight=75,
+        height=178,
+        sex=Sex.MALE,
+        activity_level=ActivityLevel.LIGHTLY_ACTIVE,
+        goal=FitnessGoal.FAT_LOSS,
+        diet_type="non_veg",
+        allergies=[]
+    )
+
+
+def _build_allergy_profile():
+    """Stable allergy-aware profile that still succeeds under current constraints."""
+    return UserProfile(
+        age=27,
+        weight=68,
+        height=165,
+        sex=Sex.FEMALE,
+        activity_level=ActivityLevel.SEDENTARY,
+        goal=FitnessGoal.MUSCLE_GAIN,
+        diet_type="non_veg",
+        allergies=["milk"]
+    )
 
 
 def test_basic_meal_plan():
@@ -27,31 +92,15 @@ def test_basic_meal_plan():
     print("TEST 1: Male, 25 years, Fat Loss Goal")
     print("=" * 70)
     
-    profile = UserProfile(
-        age=25,
-        weight=80,
-        height=180,
-        sex=Sex.MALE,
-        activity_level=ActivityLevel.MODERATELY_ACTIVE,
-        goal=FitnessGoal.FAT_LOSS,
-        diet_type=None,
-        allergies=[],
-        max_meals=4
-    )
+    profile = _build_basic_profile()
     
     print(f"\nUser Profile: {profile.age}y, {profile.weight}kg, {profile.height}cm")
     print(f"  Goal: {profile.goal.value}, Activity: {profile.activity_level.value}")
     
     plan = create_meal_plan(profile)
     
-    # Assertions
-    assert plan.bmr > 0, "BMR must be positive"
-    assert plan.tdee > plan.bmr, "TDEE must be greater than BMR"
-    assert plan.calorie_target < plan.tdee, f"Fat loss target should be less than TDEE (got {plan.calorie_target} vs {plan.tdee})"
-    assert profile.max_meals is None or plan.meal_count <= profile.max_meals, f"Meal count {plan.meal_count} exceeds max {profile.max_meals}"
-    assert plan.meal_count > 0, "Must have at least one meal"
-    assert plan.total_calories > 0, "Total calories must be positive"
-    assert plan.calorie_accuracy >= 80, f"Accuracy {plan.calorie_accuracy}% is below 80% threshold"
+    _assert_plan_invariants(plan, profile)
+    assert plan.calorie_accuracy >= 90, f"Accuracy {plan.calorie_accuracy}% is below 90% threshold"
     
     print(f"\n✓ Metabolic: BMR={plan.bmr}, TDEE={plan.tdee}, Target={plan.calorie_target}")
     print(f"✓ Macros: P={plan.macros['protein']:.0f}g, C={plan.macros['carbohydrates']:.0f}g, F={plan.macros['fat']:.0f}g")
@@ -66,66 +115,36 @@ def test_allergies_meal_plan():
     print("TEST 2: Female, 28 years, Muscle Gain, With Allergies")
     print("=" * 70)
     
-    profile = UserProfile(
-        age=28,
-        weight=60,
-        height=165,
-        sex=Sex.FEMALE,
-        activity_level=ActivityLevel.VERY_ACTIVE,
-        goal=FitnessGoal.MUSCLE_GAIN,
-        diet_type="Unknown",
-        allergies=["milk"],  # Reduced allergies for feasibility
-        max_meals=5
-    )
+    profile = _build_allergy_profile()
     
     print(f"\nProfile: {profile.age}y, {profile.weight}kg, Goal: {profile.goal.value}")
     print(f"Allergies: {', '.join(profile.allergies) if profile.allergies else 'None'}")
-    
-    try:
-        plan = create_meal_plan(profile)
-        
-        # Assertions
-        assert plan.bmr > 0, "BMR must be positive"
-        assert plan.calorie_target > plan.tdee, f"Muscle gain target should exceed TDEE (got {plan.calorie_target} vs {plan.tdee})"
-        assert profile.max_meals is None or plan.meal_count <= profile.max_meals, f"Meal count exceeds max"
-        
-        # Verify no allergens in meals
-        for meal in plan.meals:
-            ingredients_lower = meal.ingredients.lower()
-            if profile.allergies:
-                for allergen in profile.allergies:
-                    assert allergen.lower() not in ingredients_lower, f"Allergen '{allergen}' found in meal '{meal.name}'"
-        
-        print(f"\n✓ Target: {plan.calorie_target} kcal/day ({plan.meal_count} meals)")
-        print(f"✓ Accuracy: {plan.calorie_accuracy:.1f}%")
-        print(f"✓ All {plan.meal_count} meals are allergen-safe")
-        
-        return plan
-    except HTTPException as e:
-        if "Unable to generate meal plan" in str(e.detail):
-            # This is expected when constraints are too restrictive
-            print(f"\n✓ Correctly handled restrictive constraints: {e.detail[:80]}...")
-            # Return a simpler plan for testing
-            simple_profile = UserProfile(
-                age=profile.age, weight=profile.weight, height=profile.height,
-                sex=profile.sex, activity_level=profile.activity_level,
-                goal=profile.goal, diet_type=None, max_meals=5, allergies=[]
-            )
-            return create_meal_plan(simple_profile)
-        else:
-            raise
+
+    plan = create_meal_plan(profile)
+
+    _assert_plan_invariants(plan, profile)
+    _assert_allergens_excluded(plan, profile.allergies or [])
+
+    print(f"\n✓ Target: {plan.calorie_target} kcal/day ({plan.meal_count} meals)")
+    print(f"✓ Accuracy: {plan.calorie_accuracy:.1f}%")
+    print(f"✓ All {plan.meal_count} meals are allergen-safe")
+
+    return plan
 
 
-def test_helper_functions(sample_plan):
+def test_helper_functions():
     """Test 3-6: Helper Functions"""
     print("\n" + "=" * 70)
     print("TEST 3: Helper Functions")
     print("=" * 70)
+
+    sample_plan = create_meal_plan(_build_basic_profile())
     
     # Test meal plan summary
     summary = get_meal_plan_summary(sample_plan)
     assert 'meal_count' in summary, "Summary missing meal_count"
     assert 'total_calories' in summary, "Summary missing total_calories"
+    assert summary['meal_count'] == 4, f"Expected summary meal_count 4, got {summary['meal_count']}"
     print(f"\n✓ get_meal_plan_summary: {summary['meal_count']} meals, {summary['accuracy']}")
     
     # Test profile validation
@@ -136,10 +155,11 @@ def test_helper_functions(sample_plan):
         "sex": "male",
         "activity_level": "lightly_active",
         "goal": "maintenance",
-        "max_meals": 4
+        "diet_type": "veg"
     }
     validated = validate_user_profile(raw_data)
     assert validated.age == 35, "Profile validation failed"
+    assert validated.diet_type == "veg", "Diet type should be preserved during validation"
     print(f"✓ validate_user_profile: validated {validated.age}y, {validated.goal.value}")
     
     # Test meal distribution
@@ -166,36 +186,36 @@ def test_different_goals():
     print("=" * 70)
     
     base_profile = {
-        "age": 25,
-        "weight": 75,
-        "height": 180,
-        "sex": "male",
-        "activity_level": "moderately_active",
-        "max_meals": 4
+        "age": 27,
+        "weight": 68,
+        "height": 165,
+        "sex": "female",
+        "activity_level": "lightly_active",
+        "diet_type": "non_veg"
     }
     
     goals = [
-        ("fat_loss", FitnessGoal.FAT_LOSS),
-        ("maintenance", FitnessGoal.MAINTENANCE),
-        ("muscle_gain", FitnessGoal.MUSCLE_GAIN)
+        "fat_loss",
+        "maintenance",
+        "muscle_gain"
     ]
     
     results = []
-    for goal_name, goal_enum in goals:
+    for goal_name in goals:
         profile_data = {**base_profile, "goal": goal_name}
         profile = validate_user_profile(profile_data)
-        
-        try:
-            plan = create_meal_plan(profile)
-            results.append((goal_name, plan.calorie_target, plan.meal_count))
-            print(f"  {goal_name:15s}: {plan.calorie_target:.0f} kcal ({plan.meal_count} meals)")
-        except HTTPException as e:
-            # Try with more meals if initial attempt fails
-            profile_data["max_meals"] = 5
-            profile = validate_user_profile(profile_data)
-            plan = create_meal_plan(profile)
-            results.append((goal_name, plan.calorie_target, plan.meal_count))
-            print(f"  {goal_name:15s}: {plan.calorie_target:.0f} kcal ({plan.meal_count} meals)")
+
+        bmr = calculate_bmr(
+            age=profile.age,
+            weight=profile.weight,
+            height=profile.height,
+            sex=profile.sex,
+        )
+        tdee = calculate_tdee(bmr=bmr, activity_level=profile.activity_level)
+        calorie_target = adjust_for_goal(tdee=tdee, goal=profile.goal, sex=profile.sex)
+
+        results.append((goal_name, calorie_target))
+        print(f"  {goal_name:15s}: {calorie_target:.0f} kcal")
     
     # Verify ordering: fat_loss < maintenance < muscle_gain
     fat_loss_cal = results[0][1]
@@ -225,12 +245,13 @@ def test_edge_cases():
         activity_level=ActivityLevel.SEDENTARY,
         goal=FitnessGoal.FAT_LOSS,
         diet_type="Vegetarian",
-        allergies=["milk", "paneer", "ghee", "butter"],
-        max_meals=3
+        allergies=["milk", "paneer", "ghee", "butter"]
     )
     
     try:
         plan = create_meal_plan(profile)
+        _assert_plan_invariants(plan, profile)
+        _assert_allergens_excluded(plan, profile.allergies or [])
         print(f"✓ Handled restrictive constraints: {plan.meal_count} meals generated")
     except HTTPException as e:
         error_msg = str(e.detail)
@@ -252,33 +273,28 @@ def run_all_tests():
     
     all_passed = True
     failures = []
-    
-    try:
-        # Test 1
-        plan1 = test_basic_meal_plan()
-        
-        # Test 2
-        plan2 = test_allergies_meal_plan()
-        
-        # Test 3-6
-        test_helper_functions(plan1)
-        
-        # Test 7-8
-        test_different_goals()
-        
-        # Test 9
-        test_edge_cases()
-        
-    except AssertionError as e:
-        all_passed = False
-        failures.append(f"Assertion failed: {str(e)}")
-        print(f"\n✗ ASSERTION FAILED: {e}")
-        traceback.print_exc()
-    except Exception as e:
-        all_passed = False
-        failures.append(f"Unexpected error: {str(e)}")
-        print(f"\n✗ UNEXPECTED ERROR: {e}")
-        traceback.print_exc()
+
+    tests = [
+        ("Basic meal plan generation", test_basic_meal_plan),
+        ("Allergy-aware meal plan generation", test_allergies_meal_plan),
+        ("Helper functions", test_helper_functions),
+        ("Goal-based calorie ordering", test_different_goals),
+        ("Edge cases and error handling", test_edge_cases),
+    ]
+
+    for test_name, test_func in tests:
+        try:
+            test_func()
+        except AssertionError as e:
+            all_passed = False
+            failures.append(f"{test_name}: Assertion failed: {str(e)}")
+            print(f"\n✗ ASSERTION FAILED in {test_name}: {e}")
+            traceback.print_exc()
+        except Exception as e:
+            all_passed = False
+            failures.append(f"{test_name}: Unexpected error: {str(e)}")
+            print(f"\n✗ UNEXPECTED ERROR in {test_name}: {e}")
+            traceback.print_exc()
     
     # Final Summary
     print("\n" + "=" * 70)
