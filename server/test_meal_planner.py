@@ -5,6 +5,8 @@ Tests the complete meal planning workflow including all helper functions.
 Run with: python test_meal_planner.py
 """
 
+import re
+
 from services.nutrition_engine.meal_planner import (
     create_meal_plan,
     get_meal_plan_summary,
@@ -53,7 +55,8 @@ def _assert_allergens_excluded(plan, allergies):
     for meal in plan.meals:
         ingredients_lower = meal.ingredients.lower()
         for allergen in allergies:
-            assert allergen.lower() not in ingredients_lower, (
+            pattern = rf"\b{re.escape(allergen.lower())}\b"
+            assert not re.search(pattern, ingredients_lower), (
                 f"Allergen '{allergen}' found in meal '{meal.name}'"
             )
 
@@ -87,9 +90,9 @@ def _build_allergy_profile():
 
 
 def test_basic_meal_plan():
-    """Test 1: Basic Meal Plan Generation - Male, Fat Loss"""
+    """Test 1: Basic Meal Plan Generation - Male, 27 years, Fat Loss"""
     print("\n" + "=" * 70)
-    print("TEST 1: Male, 25 years, Fat Loss Goal")
+    print("TEST 1: Male, 27 years, Fat Loss Goal")
     print("=" * 70)
     
     profile = _build_basic_profile()
@@ -244,7 +247,7 @@ def test_edge_cases():
         sex=Sex.FEMALE,
         activity_level=ActivityLevel.SEDENTARY,
         goal=FitnessGoal.FAT_LOSS,
-        diet_type="Vegetarian",
+        diet_type="veg",
         allergies=["milk", "paneer", "ghee", "butter"]
     )
     

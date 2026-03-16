@@ -285,13 +285,13 @@ def validate_macro_totals(
         >>> print(f"Macros are valid: {valid}")
         Macros are valid: True
     """
-    # Validate inputs
+    # Validate inputs – return False for invalid arguments to preserve the bool contract.
     if expected_calories <= 0:
-        raise ValueError("expected_calories must be > 0")
+        return False
     if tolerance < 0:
-        raise ValueError("tolerance must be >= 0")
+        return False
     if protein_grams < 0 or carb_grams < 0 or fat_grams < 0:
-        raise ValueError("Macro grams must be non-negative")
+        return False
     
     # Calculate actual calories from macros
     calculated_calories = (

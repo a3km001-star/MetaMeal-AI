@@ -273,6 +273,14 @@ def fill_macro_gap(
                 warnings.append("No supplement fits the remaining calorie budget.")
             break
 
+        if float(supplement.get("protein", 0) or 0) <= 0:
+            warnings.append("No supplement provides protein to reduce remaining gap.")
+            break
+
+        # Remove selected supplement from the pool so the same item is not picked
+        # again on the next iteration (preventing an infinite loop).
+        filtered_supplements = [s for s in filtered_supplements if s is not supplement]
+
         supplement_item = {
             "name": str(supplement.get("name", "Supplement")),
             "protein": round(float(supplement.get("protein", 0) or 0), 2),

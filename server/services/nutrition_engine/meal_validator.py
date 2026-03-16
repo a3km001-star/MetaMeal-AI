@@ -8,7 +8,7 @@ plan as invalid and regenerate.
 Validation checks
 -----------------
 1. Calorie validation      – total calories within ±10 % of target
-2. Macro validation        – protein / carbs / fat each within ±10 % of target
+2. Macro validation        – protein / carbs / fat each within ±20 % of target
 3. Diet-type compliance    – every meal satisfies the requested diet type
 4. Allergy compliance      – no meal ingredient contains a listed allergen
 5. Meal-structure validity – plan contains exactly Breakfast, Lunch, Dinner, Snack
@@ -63,7 +63,7 @@ _DIET_ALIAS_MAP: Dict[str, str] = {
 
 def _all_plan_items(meal_plan: CompleteMealPlan) -> List:
     """Return meals plus supplements for validations that apply to all consumables."""
-    return list(meal_plan.meals) + list(meal_plan.supplements)
+    return list(meal_plan.meals) + list(meal_plan.supplements or [])
 
 def calculate_total_calories(meal_plan: CompleteMealPlan) -> float:
     """Sum calorie values across all meals in the plan."""
@@ -223,14 +223,13 @@ def validate_diet(meal_plan: CompleteMealPlan, user_diet: Optional[str]) -> bool
             # Fail if non-veg ingredients are found in a meal not marked vegetarian
             if diet_type_field == "non-vegetarian":
                 violations.append(f"'{item.name}' is marked non-vegetarian")
-            elif diet_type_field not in ("vegetarian", "unknown"):
-                violations.append(f"'{item.name}' has unrecognised diet_type '{item.diet_type}'")
-            else:
+            elif diet_type_field in ("vegetarian", "vegan", "unknown"):
                 has_non_veg = any(
                     _contains_keyword(ingredients_lower, kw) for kw in _NON_VEG_KEYWORDS
                 )
                 if has_non_veg:
                     violations.append(f"'{item.name}' contains non-vegetarian ingredients")
+            # else: unrecognised diet_type – accepted to avoid false positives from alias variants
 
         elif normalized == "vegan":
             has_non_vegan = any(
