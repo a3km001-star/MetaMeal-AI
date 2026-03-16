@@ -44,17 +44,26 @@ async def search_recipes(
     """Search recipes by nutritional criteria."""
     recipes = load_food_dataset()
 
-    # Apply filters
+    # Apply filters with defensive key access and type checking
     filtered = recipes
 
     if max_calories:
-        filtered = [r for r in filtered if r['Calories'] <= max_calories]
+        filtered = [
+            r for r in filtered
+            if isinstance(r.get('Calories'), (int, float)) and r.get('Calories') <= max_calories
+        ]
 
     if min_protein:
-        filtered = [r for r in filtered if r['Protein'] >= min_protein]
+        filtered = [
+            r for r in filtered
+            if isinstance(r.get('Protein'), (int, float)) and r.get('Protein') >= min_protein
+        ]
 
     if diet_type:
-        filtered = [r for r in filtered if r['DietType'].lower() == diet_type.lower()]
+        filtered = [
+            r for r in filtered
+            if isinstance(r.get('DietType'), str) and r.get('DietType').lower() == diet_type.lower()
+        ]
 
     return {
         "total": len(filtered),

@@ -63,16 +63,9 @@ class MacroSplit(BaseModel):
 
 class MacroRequest(BaseModel):
     """Request model for macro calculation."""
-    calories: float = Field(..., gt=800, lt=6000, description="Target daily calories")
+    calories: float = Field(..., ge=800, le=6000, description="Target daily calories (800-6000 kcal)")
     goal: FitnessGoal = Field(..., description="Fitness goal")
     weight_kg: Optional[float] = Field(None, ge=30, le=300, description="Body weight in kg (optional)")
-    
-    @validator('calories')
-    def validate_calories(cls, v):
-        """Validate calorie input is reasonable."""
-        if v < 800 or v > 6000:
-            raise ValueError("Calories must be between 800 and 6000")
-        return v
 
 
 def calculate_macros(
@@ -138,11 +131,6 @@ def calculate_macros(
             
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error calculating macros: {str(e)}"
-        )
 
 
 def _calculate_macros_by_ratio(calories: float, goal: FitnessGoal) -> MacroSplit:
@@ -289,11 +277,22 @@ def validate_macro_totals(
     Returns:
         bool: True if macros match expected calories within tolerance
         
+    Raises:
+        ValueError: If input values are invalid
+        
     Example:
         >>> valid = validate_macro_totals(150, 200, 67, 2000)
         >>> print(f"Macros are valid: {valid}")
         Macros are valid: True
     """
+    # Validate inputs
+    if expected_calories <= 0:
+        raise ValueError("expected_calories must be > 0")
+    if tolerance < 0:
+        raise ValueError("tolerance must be >= 0")
+    if protein_grams < 0 or carb_grams < 0 or fat_grams < 0:
+        raise ValueError("Macro grams must be non-negative")
+    
     # Calculate actual calories from macros
     calculated_calories = (
         (protein_grams * PROTEIN_CALORIES_PER_GRAM) +

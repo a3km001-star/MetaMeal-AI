@@ -9,9 +9,13 @@ This module provides various helper functions including:
 
 import json
 import os
+import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from fastapi import HTTPException
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
 
 
 def load_food_dataset() -> List[Dict[str, Any]]:
@@ -70,24 +74,36 @@ def load_food_dataset() -> List[Dict[str, Any]]:
         return recipes
         
     except FileNotFoundError as e:
+        # Log full error details server-side
+        logger.error(f"Food dataset file not found: {str(e)}", exc_info=True)
+        # Return generic error to client
         raise HTTPException(
             status_code=500,
-            detail=f"Food dataset file not found: {str(e)}"
+            detail="Failed to load food dataset"
         )
     except json.JSONDecodeError as e:
+        # Log full error details server-side
+        logger.error(f"Invalid JSON format in dataset file: {str(e)}", exc_info=True)
+        # Return generic error to client
         raise HTTPException(
             status_code=500,
-            detail=f"Invalid JSON format in dataset file: {str(e)}"
+            detail="Failed to load food dataset"
         )
     except ValueError as e:
+        # Log full error details server-side
+        logger.error(f"Dataset validation error: {str(e)}", exc_info=True)
+        # Return generic error to client
         raise HTTPException(
             status_code=500,
-            detail=f"Dataset validation error: {str(e)}"
+            detail="Failed to load food dataset"
         )
     except Exception as e:
+        # Log full error details server-side
+        logger.error(f"Unexpected error loading food dataset: {str(e)}", exc_info=True)
+        # Return generic error to client
         raise HTTPException(
             status_code=500,
-            detail=f"Error loading food dataset: {str(e)}"
+            detail="Failed to load food dataset"
         )
 
 

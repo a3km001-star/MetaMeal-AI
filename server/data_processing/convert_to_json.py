@@ -11,6 +11,7 @@ import sys
 import json
 import pandas as pd
 from pathlib import Path
+from datetime import datetime
 
 
 def convert_csv_to_json(
@@ -57,8 +58,8 @@ def convert_csv_to_json(
         json_data = {
             "metadata": {
                 "total_recipes": len(recipes_list),
-                "source": "cleaned_food_dataset.csv",
-                "date_created": "2026-03-10",
+                "source": input_file,
+                "date_created": datetime.now().date().isoformat(),
                 "columns": list(df.columns)
             },
             "recipes": recipes_list
