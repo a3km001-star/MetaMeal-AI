@@ -52,6 +52,6 @@ def generate_meal_plan_controller(request_data: Union[MealRequest, Dict[str, Any
 	except FileNotFoundError:
 		logger.exception("Meal generation failed: dataset file missing")
 		raise HTTPException(status_code=500, detail="Dataset file is missing")
-	except Exception as exc:
+	except Exception:
 		logger.exception("Meal generation failed with internal error")
-		raise HTTPException(status_code=500, detail=f"Internal server error while generating meal plan: {exc}")
+		raise HTTPException(status_code=500, detail="Internal server error while generating meal plan")

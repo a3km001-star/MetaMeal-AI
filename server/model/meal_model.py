@@ -32,12 +32,20 @@ class MealRequest(BaseModel):
 	@classmethod
 	def validate_diet_type(cls, value: str) -> str:
 		normalized = str(value).strip().lower()
-		allowed = {"veg", "non_veg", "vegan", "vegetarian", "non-veg", "non vegetarian", "nonveg"}
-		if normalized not in allowed:
+		canonical_map = {
+			"veg": "veg",
+			"vegetarian": "veg",
+			"vegan": "vegan",
+			"non_veg": "non_veg",
+			"nonveg": "non_veg",
+			"non-veg": "non_veg",
+			"non vegetarian": "non_veg",
+		}
+		if normalized not in canonical_map:
 			raise ValueError(
 				"diet_type must be one of: veg, non_veg, vegan, vegetarian, non-veg, non vegetarian, nonveg"
 			)
-		return normalized
+		return canonical_map[normalized]
 
 	@field_validator("activity_level", mode="before")
 	@classmethod

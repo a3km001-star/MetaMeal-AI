@@ -176,14 +176,20 @@ def calculate_macro_totals(meal_plan: Optional[Dict[str, Any]]) -> Dict[str, flo
     for slot in ("breakfast", "lunch", "dinner", "snack"):
         meal = normalized.get(slot, {})
         totals["protein"] += float(meal.get("protein", 0) or 0)
-        totals["carbs"] += float(meal.get("carbs", 0) or meal.get("carbohydrates", 0) or 0)
+        meal_carbs = meal.get("carbs")
+        if meal_carbs is None:
+            meal_carbs = meal.get("carbohydrates", 0)
+        totals["carbs"] += float(meal_carbs or 0)
         totals["fat"] += float(meal.get("fat", 0) or 0)
 
     for supplement in normalized.get("supplements", []):
         if not isinstance(supplement, dict):
             continue
         totals["protein"] += float(supplement.get("protein", 0) or 0)
-        totals["carbs"] += float(supplement.get("carbs", 0) or supplement.get("carbohydrates", 0) or 0)
+        supplement_carbs = supplement.get("carbs")
+        if supplement_carbs is None:
+            supplement_carbs = supplement.get("carbohydrates", 0)
+        totals["carbs"] += float(supplement_carbs or 0)
         totals["fat"] += float(supplement.get("fat", 0) or 0)
 
     return {

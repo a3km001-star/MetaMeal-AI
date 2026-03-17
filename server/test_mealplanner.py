@@ -170,7 +170,7 @@ def run_local_test() -> None:
             raise RuntimeError("No meals available after filtering") from exc
 
         if "no valid meal plan generated" in detail_text:
-            logger.warning("Validation failed, regenerating")
+            logger.warning("Validation failed, aborting and raising RuntimeError")
             raise RuntimeError("Unable to generate valid meal plan") from exc
 
         if "dataset" in detail_text or "failed to load food dataset" in detail_text:
