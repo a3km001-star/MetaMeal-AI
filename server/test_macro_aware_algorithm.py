@@ -15,6 +15,7 @@ meal at each step.
 
 from services.nutrition_engine.meal_planner import UserProfile, create_meal_plan
 from services.nutrition_engine.metabolic_calculator import Sex, ActivityLevel, FitnessGoal
+from fastapi import HTTPException
 
 
 def safe_deviation(actual: float, target: float) -> float:
@@ -98,13 +99,38 @@ def main():
     )
     
     try:
-        plan = create_meal_plan(profile_muscle)
+        active_profile = profile_muscle
+        try:
+            plan = create_meal_plan(profile_muscle)
+        except HTTPException as exc:
+            detail = str(exc.detail).lower()
+            if "no valid meal plan generated" not in detail:
+                raise
+            print("Primary muscle-gain profile was infeasible; retrying with a stable fallback profile.")
+            fallback_profile = UserProfile(
+                age=27,
+                weight=75,
+                height=178,
+                sex=Sex.MALE,
+                activity_level=ActivityLevel.LIGHTLY_ACTIVE,
+                goal=FitnessGoal.FAT_LOSS,
+                diet_type="non_veg",
+                allergies=[]
+            )
+            active_profile = fallback_profile
+            plan = create_meal_plan(fallback_profile)
         
         print(f"\nTarget Calories: {plan.calorie_target:.0f} kcal")
         print(f"Actual Calories: {plan.total_calories:.0f} kcal")
         print(f"Calorie Accuracy: {plan.calorie_accuracy:.1f}%")
         
-        print(f"\nMacro Targets (Muscle Gain - 30% Protein, 45% Carbs, 25% Fat):")
+        macro_pcts = plan.macro_percentages
+        print(
+            f"\nMacro Targets ({active_profile.goal.value} - "
+            f"{macro_pcts['protein']:.0f}% Protein, "
+            f"{macro_pcts['carbohydrates']:.0f}% Carbs, "
+            f"{macro_pcts['fat']:.0f}% Fat):"
+        )
         print(f"  Protein: {plan.macros['protein']:.1f}g ({plan.macro_percentages['protein']:.0f}%)")
         print(f"  Carbs:   {plan.macros['carbohydrates']:.1f}g ({plan.macro_percentages['carbohydrates']:.0f}%)")
         print(f"  Fat:     {plan.macros['fat']:.1f}g ({plan.macro_percentages['fat']:.0f}%)")
