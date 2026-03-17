@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "total_recipes": 857,
+    "total_recipes": 889,
     "source": "cleaned_food_dataset.csv",
     "date_created": "2026-03-10",
     "columns": [
@@ -8584,6 +8584,326 @@
       "Ingredients": "tomato,coriander (dhania),cumin powder (jeera),ginger,salt,cardamom (elaichi) podsseeds,cloves garlic,onion,cinnamon stick (dalchini),rajma (large kidney beans),turmeric powder,butter,garam masala powder,sunflower oil",
       "Instructions": "To begin making the Rajma Masala recipe, we will first soak the rajma immersed completely in 3 cups of water for about 8 to 10 hours.\r\nTo make the Rajma Masala turn on the Preethi Pressure Cooker.\r\nChange the setting on the pressure cooker to the saute mode.Heat a teaspoon of oil in the electric pressure cooker pan; add the onion, garlic, ginger and saute for 3 to 4 minutes until the onions start to turn golden in colour.Once done stir in the tomato puree, the turmeric powder, cumin powder, garam masala powder, cardamom pods and cinnamon stick.Saute for another couple of minutes and then add in the soaked rajma along with its water.\r\nAdd any additional water if required.\r\nThere should enough water such that the water level is at least 1 inch above the rajma.Cover the pressure cooker, set the mode to rajma mode and wait until done.\r\nOnce done the electric pressure cooker will go into the keep warm mode.\r\nAllow the pressure cooker to release its pressure naturally - you will notice the pressure indicator has gone down.The rajma will continue to cook in the pressure cooker as long as there is pressure inside.Once the pressure has released, open the cooker.\r\nThe rajma should be now cooked completely.\r\nIf you press the rajma between your fingers it will get mashed easily.Once the Rajma Masala is cooked, check the salt and spice levels and adjust to suit your taste.\r\nStir in the chopped coriander leaves and serve.Serve the Rajma Masala dish for Sunday Lunch along with Steamed Hot Rice and Aloo Parwal Sabzi making the meal wholesome and nutritious.",
       "DietType": "Unknown"
+    },
+    {
+      "RecipeName": "High Protein Paneer Bhurji Recipe",
+      "Calories": 236.0,
+      "Protein": 24.0,
+      "Carbohydrates": 8.0,
+      "Fat": 12.0,
+      "Ingredients": "paneer,onion,tomato,green chilli,ginger,cumin seeds (jeera),turmeric powder,coriander (dhania) leaves,black pepper,salt",
+      "Instructions": "Heat a pan and temper cumin seeds. Add onion, ginger and green chilli and saute until aromatic. Add tomato, turmeric and salt and cook until soft. Crumble paneer into the pan, stir well and cook for 3 to 4 minutes. Finish with coriander and black pepper before serving.",
+      "DietType": "Vegetarian"
+    },
+    {
+      "RecipeName": "Soya Chunk Masala Stir Fry Recipe",
+      "Calories": 248.0,
+      "Protein": 30.0,
+      "Carbohydrates": 14.0,
+      "Fat": 8.0,
+      "Ingredients": "soya chunks,onion,tomato,ginger garlic paste,green chilli,coriander powder,garam masala powder,turmeric powder,salt,sunflower oil",
+      "Instructions": "Soak the soya chunks in hot water, squeeze and keep aside. Saute onion with ginger garlic paste and green chilli until soft. Add tomato and powdered spices and cook into a masala. Toss in the soya chunks and stir fry until the masala coats evenly. Serve hot.",
+      "DietType": "Vegan"
+    },
+    {
+      "RecipeName": "Tandoori Chicken Tikka Protein Plate",
+      "Calories": 232.0,
+      "Protein": 34.0,
+      "Carbohydrates": 6.0,
+      "Fat": 8.0,
+      "Ingredients": "chicken breast,thick curd,ginger garlic paste,kashmiri red chilli powder,garam masala powder,lemon juice,salt",
+      "Instructions": "Marinate the chicken breast with curd, ginger garlic paste, spices, lemon juice and salt for 30 minutes. Grill or roast until cooked through and lightly charred at the edges. Rest briefly and serve warm.",
+      "DietType": "Non-Vegetarian"
+    },
+    {
+      "RecipeName": "Amritsari Fish Tikka High Protein Recipe",
+      "Calories": 203.0,
+      "Protein": 30.0,
+      "Carbohydrates": 5.0,
+      "Fat": 7.0,
+      "Ingredients": "fish fillet,thick curd,ajwain (carom seeds),ginger garlic paste,lemon juice,red chilli powder,salt,mustard oil",
+      "Instructions": "Coat the fish fillets with curd, ajwain, ginger garlic paste, lemon juice, chilli powder and salt. Rest for 20 minutes. Grill on high heat until the fish is tender and lightly smoky. Serve immediately.",
+      "DietType": "Non-Vegetarian"
+    },
+    {
+      "RecipeName": "Egg White Bhurji Recipe",
+      "Calories": 166.0,
+      "Protein": 24.0,
+      "Carbohydrates": 4.0,
+      "Fat": 6.0,
+      "Ingredients": "egg whites,onion,tomato,green chilli,turmeric powder,black pepper,salt,coriander (dhania) leaves",
+      "Instructions": "Saute onion, tomato and green chilli until softened. Season with turmeric, pepper and salt. Pour in the egg whites and scramble gently over medium heat until just set. Garnish with coriander and serve hot.",
+      "DietType": "Non-Vegetarian"
+    },
+    {
+      "RecipeName": "Grilled Tandoori Tofu Recipe",
+      "Calories": 208.0,
+      "Protein": 24.0,
+      "Carbohydrates": 10.0,
+      "Fat": 8.0,
+      "Ingredients": "firm tofu,ginger garlic paste,red chilli powder,lemon juice,kasuri methi,salt,mustard oil",
+      "Instructions": "Press the tofu to remove excess moisture and cut into thick slices. Marinate with ginger garlic paste, chilli powder, lemon juice, kasuri methi, salt and mustard oil. Grill until golden and serve hot.",
+      "DietType": "Vegan"
+    },
+    {
+      "RecipeName": "Low Fat Paneer Tikka Recipe",
+      "Calories": 216.0,
+      "Protein": 28.0,
+      "Carbohydrates": 8.0,
+      "Fat": 8.0,
+      "Ingredients": "low fat paneer,thick curd,ginger garlic paste,red chilli powder,garam masala powder,lemon juice,salt,capsicum (green)",
+      "Instructions": "Cube the paneer and capsicum. Toss with curd, ginger garlic paste, chilli powder, garam masala, lemon juice and salt. Grill or roast until lightly charred and serve warm.",
+      "DietType": "Vegetarian"
+    },
+    {
+      "RecipeName": "Chicken Keema Matar Protein Recipe",
+      "Calories": 245.0,
+      "Protein": 31.0,
+      "Carbohydrates": 10.0,
+      "Fat": 9.0,
+      "Ingredients": "chicken keema,green peas (matar),onion,tomato,ginger garlic paste,garam masala powder,red chilli powder,turmeric powder,salt,sunflower oil",
+      "Instructions": "Saute onion with ginger garlic paste until lightly golden. Add tomato and spices and cook into a thick masala. Add chicken keema and peas and cook until the keema is tender and the mixture is dry. Serve hot.",
+      "DietType": "Non-Vegetarian"
+    },
+    {
+      "RecipeName": "Prawn Pepper Fry Recipe",
+      "Calories": 195.0,
+      "Protein": 27.0,
+      "Carbohydrates": 6.0,
+      "Fat": 7.0,
+      "Ingredients": "prawns,onion,ginger garlic paste,black pepper powder,curry leaves,lemon juice,salt,coconut oil",
+      "Instructions": "Saute onion, ginger garlic paste and curry leaves until fragrant. Add prawns, black pepper and salt and cook just until the prawns curl and turn opaque. Finish with lemon juice and serve hot.",
+      "DietType": "Non-Vegetarian"
+    },
+    {
+      "RecipeName": "Moong Dal Chilla Stuffed Paneer Recipe",
+      "Calories": 290.0,
+      "Protein": 26.0,
+      "Carbohydrates": 24.0,
+      "Fat": 10.0,
+      "Ingredients": "yellow moong dal (split),paneer,green chilli,ginger,cumin seeds (jeera),salt,coriander (dhania) leaves,sunflower oil",
+      "Instructions": "Soak moong dal and grind it with ginger, green chilli, cumin and salt to make a batter. Prepare a quick paneer filling with coriander and seasoning. Spread the batter on a hot tawa, cook both sides, add the paneer filling and fold before serving.",
+      "DietType": "Vegetarian"
+    },
+    {
+      "RecipeName": "Sprouted Moong Paneer Salad Recipe",
+      "Calories": 216.0,
+      "Protein": 22.0,
+      "Carbohydrates": 16.0,
+      "Fat": 8.0,
+      "Ingredients": "sprouted moong beans,paneer,cucumber,tomato,lemon juice,black pepper,salt,coriander (dhania) leaves",
+      "Instructions": "Steam the sprouted moong lightly until just tender. Toss with paneer cubes, cucumber, tomato, lemon juice, pepper, salt and coriander. Chill briefly and serve.",
+      "DietType": "Vegetarian"
+    },
+    {
+      "RecipeName": "Masoor Dal Egg Drop Soup Recipe",
+      "Calories": 218.0,
+      "Protein": 23.0,
+      "Carbohydrates": 18.0,
+      "Fat": 6.0,
+      "Ingredients": "masoor dal,egg whites,ginger,garlic,black pepper,salt,coriander (dhania) leaves,cumin powder (jeera)",
+      "Instructions": "Cook the masoor dal until soft and blend lightly for texture. Bring it to a simmer with ginger, garlic, cumin and pepper. Slowly pour in the whisked egg whites while stirring to create ribbons. Finish with coriander and serve hot.",
+      "DietType": "Non-Vegetarian"
+    },
+    {
+      "RecipeName": "High Protein Dal Tadka Recipe",
+      "Calories": 267.0,
+      "Protein": 22.0,
+      "Carbohydrates": 28.0,
+      "Fat": 7.0,
+      "Ingredients": "yellow moong dal (split),masoor dal,tomato,onion,ginger,garlic,cumin seeds (jeera),turmeric powder,red chilli powder,ghee,salt,coriander (dhania) leaves",
+      "Instructions": "Cook the dals with turmeric until soft. Prepare a tadka with ghee, cumin, onion, ginger and garlic, then add tomato and chilli powder and cook until rich. Pour the cooked dal into the tadka, simmer for a few minutes and finish with coriander before serving.",
+      "DietType": "Vegetarian"
+    },
+    {
+      "RecipeName": "Chicken Tikka Brown Rice Bowl Recipe",
+      "Calories": 512.0,
+      "Protein": 42.0,
+      "Carbohydrates": 50.0,
+      "Fat": 16.0,
+      "Ingredients": "chicken breast,brown rice,thick curd,ginger garlic paste,red chilli powder,garam masala powder,lemon juice,salt,cucumber",
+      "Instructions": "Marinate chicken with curd, ginger garlic paste, chilli powder, garam masala, lemon juice and salt. Grill until cooked through. Layer cooked brown rice in a bowl, top with sliced chicken and cucumber, and serve warm.",
+      "DietType": "Non-Vegetarian"
+    },
+    {
+      "RecipeName": "Chicken Moong Dal Khichda Recipe",
+      "Calories": 487.0,
+      "Protein": 38.0,
+      "Carbohydrates": 48.0,
+      "Fat": 15.0,
+      "Ingredients": "chicken breast,yellow moong dal (split),rice,ginger garlic paste,turmeric powder,black pepper,salt,ghee,coriander (dhania) leaves",
+      "Instructions": "Cook moong dal and rice until soft. In a separate pan, saute ginger garlic paste and chicken pieces until lightly browned. Combine with the cooked khichda, season with turmeric, pepper and salt, and simmer until thick. Finish with coriander before serving.",
+      "DietType": "Non-Vegetarian"
+    },
+    {
+      "RecipeName": "Fish Curry Red Rice Bowl Recipe",
+      "Calories": 450.0,
+      "Protein": 36.0,
+      "Carbohydrates": 46.0,
+      "Fat": 14.0,
+      "Ingredients": "fish fillet,red rice,onion,tomato,ginger garlic paste,coconut milk,turmeric powder,red chilli powder,salt,curry leaves",
+      "Instructions": "Cook the red rice until fluffy and keep aside. Prepare a light fish curry with onion, tomato, ginger garlic paste, coconut milk and spices. Simmer the fish gently until tender, then serve over warm red rice.",
+      "DietType": "Non-Vegetarian"
+    },
+    {
+      "RecipeName": "Prawn Coconut Curry Bowl Recipe",
+      "Calories": 414.0,
+      "Protein": 34.0,
+      "Carbohydrates": 30.0,
+      "Fat": 18.0,
+      "Ingredients": "prawns,steamed rice,onion,ginger garlic paste,coconut milk,curry leaves,black pepper powder,salt,turmeric powder",
+      "Instructions": "Saute onion and ginger garlic paste until fragrant. Add coconut milk, turmeric, pepper and salt and bring to a simmer. Add prawns and cook briefly until opaque, then serve with steamed rice.",
+      "DietType": "Non-Vegetarian"
+    },
+    {
+      "RecipeName": "Paneer Millet Power Bowl Recipe",
+      "Calories": 490.0,
+      "Protein": 34.0,
+      "Carbohydrates": 44.0,
+      "Fat": 18.0,
+      "Ingredients": "low fat paneer,foxtail millet,onion,capsicum (green),ginger garlic paste,black pepper,salt,coriander (dhania) leaves,sunflower oil",
+      "Instructions": "Cook the millet until fluffy. Saute onion, capsicum and ginger garlic paste until softened, then add paneer cubes, pepper and salt and cook for a few minutes. Combine with millet and finish with coriander before serving.",
+      "DietType": "Vegetarian"
+    },
+    {
+      "RecipeName": "Soya Keema Quinoa Bowl Recipe",
+      "Calories": 456.0,
+      "Protein": 36.0,
+      "Carbohydrates": 42.0,
+      "Fat": 16.0,
+      "Ingredients": "soya granules,quinoa,onion,tomato,ginger garlic paste,green chilli,coriander powder,garam masala powder,salt,sunflower oil",
+      "Instructions": "Cook quinoa and keep aside. Rehydrate the soya granules and squeeze out excess water. Make a dry masala with onion, tomato, ginger garlic paste and spices, add the soya granules and cook through, then spoon over quinoa and serve warm.",
+      "DietType": "Vegan"
+    },
+    {
+      "RecipeName": "Paneer Moong Chilla Plate Recipe",
+      "Calories": 416.0,
+      "Protein": 32.0,
+      "Carbohydrates": 36.0,
+      "Fat": 16.0,
+      "Ingredients": "yellow moong dal (split),paneer,green chilli,ginger,cumin seeds (jeera),salt,onion,coriander (dhania) leaves,sunflower oil",
+      "Instructions": "Grind soaked moong dal with ginger, green chilli, cumin and salt into a smooth batter. Cook thin chillas on a hot tawa. Fill them with a lightly seasoned paneer and onion mixture, fold and serve hot.",
+      "DietType": "Vegetarian"
+    },
+    {
+      "RecipeName": "Tofu Rajma Protein Bowl Recipe",
+      "Calories": 406.0,
+      "Protein": 30.0,
+      "Carbohydrates": 40.0,
+      "Fat": 14.0,
+      "Ingredients": "firm tofu,rajma (large kidney beans),onion,tomato,ginger garlic paste,cumin powder (jeera),garam masala powder,salt,lemon juice",
+      "Instructions": "Cook the rajma until tender and prepare a thick masala with onion, tomato, ginger garlic paste and spices. Pan-sear tofu cubes separately. Assemble the bowl with rajma masala and tofu, then finish with lemon juice before serving.",
+      "DietType": "Vegan"
+    },
+    {
+      "RecipeName": "Paneer Brown Rice Power Bowl Recipe",
+      "Calories": 610.0,
+      "Protein": 38.0,
+      "Carbohydrates": 58.0,
+      "Fat": 22.0,
+      "Ingredients": "low fat paneer,brown rice,onion,capsicum (green),tomato,ginger garlic paste,black pepper,salt,sunflower oil,coriander (dhania) leaves",
+      "Instructions": "Cook brown rice until fluffy. Saute onion, capsicum and tomato with ginger garlic paste and black pepper. Add paneer cubes, season well, then serve over brown rice with coriander.",
+      "DietType": "Vegetarian"
+    },
+    {
+      "RecipeName": "Rajma Paneer Power Bowl Recipe",
+      "Calories": 560.0,
+      "Protein": 34.0,
+      "Carbohydrates": 52.0,
+      "Fat": 20.0,
+      "Ingredients": "rajma (large kidney beans),paneer,onion,tomato,ginger garlic paste,cumin seeds (jeera),garam masala powder,salt,sunflower oil",
+      "Instructions": "Cook rajma until soft and prepare a thick onion-tomato masala with cumin and garam masala. Fold in paneer cubes and simmer briefly. Serve the rajma paneer mixture hot as a hearty bowl meal.",
+      "DietType": "Vegetarian"
+    },
+    {
+      "RecipeName": "Soya Chunk Pulao Bowl Recipe",
+      "Calories": 590.0,
+      "Protein": 36.0,
+      "Carbohydrates": 64.0,
+      "Fat": 18.0,
+      "Ingredients": "soya chunks,basmati rice,onion,green peas,ginger garlic paste,garam masala powder,black pepper,salt,sunflower oil",
+      "Instructions": "Cook the rice separately until just done. Rehydrate the soya chunks and squeeze out excess water. Toss onion, peas, ginger garlic paste and spices in oil, add the soya chunks and fold in the rice until the pulao is well combined.",
+      "DietType": "Vegan"
+    },
+    {
+      "RecipeName": "Tofu Peanut Millet Bowl Recipe",
+      "Calories": 540.0,
+      "Protein": 30.0,
+      "Carbohydrates": 56.0,
+      "Fat": 18.0,
+      "Ingredients": "firm tofu,foxtail millet,roasted peanuts,onion,capsicum (green),ginger garlic paste,red chilli powder,salt,lemon juice",
+      "Instructions": "Cook millet until fluffy and keep aside. Stir-fry tofu, onion and capsicum with ginger garlic paste and chilli powder. Fold in the millet and roasted peanuts, then finish with lemon juice before serving.",
+      "DietType": "Vegan"
+    },
+    {
+      "RecipeName": "Chole Tofu Millet Bowl Recipe",
+      "Calories": 575.0,
+      "Protein": 32.0,
+      "Carbohydrates": 62.0,
+      "Fat": 18.0,
+      "Ingredients": "kabuli chana (white chickpeas),firm tofu,foxtail millet,onion,tomato,ginger garlic paste,coriander powder,garam masala powder,salt,sunflower oil",
+      "Instructions": "Cook chickpeas until tender and prepare a thick chole masala with onion, tomato and spices. Pan-sear tofu cubes separately. Spoon the chole and tofu over warm millet and serve as a complete meal bowl.",
+      "DietType": "Vegan"
+    },
+    {
+      "RecipeName": "Vegan Soya Dal Khichdi Recipe",
+      "Calories": 560.0,
+      "Protein": 34.0,
+      "Carbohydrates": 60.0,
+      "Fat": 16.0,
+      "Ingredients": "soya granules,yellow moong dal (split),rice,onion,ginger garlic paste,turmeric powder,black pepper,salt,sunflower oil",
+      "Instructions": "Cook the rice and moong dal together until soft. Saute onion and ginger garlic paste in oil, add the rehydrated soya granules and spices, then fold into the khichdi and simmer briefly before serving.",
+      "DietType": "Vegan"
+    },
+    {
+      "RecipeName": "Paneer Dal Makhani Brown Rice Bowl Recipe",
+      "Calories": 620.0,
+      "Protein": 32.0,
+      "Carbohydrates": 68.0,
+      "Fat": 22.0,
+      "Ingredients": "low fat paneer,whole urad dal (whole black lentil),brown rice,onion,tomato,ginger garlic paste,cream,garam masala powder,salt",
+      "Instructions": "Cook the urad dal until creamy. Prepare a rich tomato-onion masala, add ginger garlic paste and garam masala, then fold in the dal. Stir in a touch of cream and paneer cubes and simmer. Serve over brown rice.",
+      "DietType": "Vegetarian"
+    },
+    {
+      "RecipeName": "Moong Dal Khichdi Protein Bowl Recipe",
+      "Calories": 475.0,
+      "Protein": 26.0,
+      "Carbohydrates": 64.0,
+      "Fat": 12.0,
+      "Ingredients": "yellow moong dal (split),rice,onion,ginger garlic paste,turmeric powder,cumin seeds (jeera),black pepper,salt,ghee",
+      "Instructions": "Pressure-cook moong dal and rice together until very soft. Prepare a simple tadka with ghee, cumin and ginger garlic paste. Pour the tadka over the khichdi, mix well and serve hot.",
+      "DietType": "Vegetarian"
+    },
+    {
+      "RecipeName": "Soya Chunk Tomato Rice Bowl Recipe",
+      "Calories": 545.0,
+      "Protein": 30.0,
+      "Carbohydrates": 68.0,
+      "Fat": 14.0,
+      "Ingredients": "soya chunks,basmati rice,tomato,onion,ginger garlic paste,red chilli powder,coriander powder,salt,sunflower oil",
+      "Instructions": "Cook the basmati rice separately until fluffy. Rehydrate and squeeze the soya chunks, then stir-fry them with tomato, onion and spices until the masala is dry. Fold in the rice and serve hot.",
+      "DietType": "Vegan"
+    },
+    {
+      "RecipeName": "Chole Rice Power Bowl Recipe",
+      "Calories": 580.0,
+      "Protein": 22.0,
+      "Carbohydrates": 78.0,
+      "Fat": 14.0,
+      "Ingredients": "kabuli chana (white chickpeas),steamed rice,onion,tomato,ginger garlic paste,cumin powder (jeera),garam masala powder,salt,sunflower oil,coriander (dhania) leaves",
+      "Instructions": "Cook chickpeas until tender and prepare a thick chole masala with onion, tomato, ginger garlic paste and spices. Simmer until the gravy thickens. Serve over steamed rice topped with coriander.",
+      "DietType": "Vegan"
+    },
+    {
+      "RecipeName": "Aloo Paneer Brown Rice Bowl Recipe",
+      "Calories": 556.0,
+      "Protein": 24.0,
+      "Carbohydrates": 70.0,
+      "Fat": 18.0,
+      "Ingredients": "paneer,potato,brown rice,onion,tomato,ginger garlic paste,cumin seeds (jeera),turmeric powder,garam masala powder,salt,sunflower oil",
+      "Instructions": "Cook brown rice until fluffy. Cube and lightly saute paneer and potato separately. Prepare a tomato-onion masala with cumin, turmeric, garam masala and combine the paneer and potato. Serve over brown rice.",
+      "DietType": "Vegetarian"
     }
   ]
 }

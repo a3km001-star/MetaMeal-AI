@@ -263,7 +263,7 @@ def validate_macro_totals(
     tolerance: float = 0.05
 ) -> bool:
     """
-    Validate that macro totals match expected calorie target.
+    Validate that macro totals match the expected calorie target.
     
     Uses the formula: (Protein × 4) + (Carbs × 4) + (Fat × 9) = Total Calories
     
@@ -275,23 +275,25 @@ def validate_macro_totals(
         tolerance (float): Acceptable deviation (default 5%)
         
     Returns:
-        bool: True if macros match expected calories within tolerance
+        bool: True if macros match expected calories within tolerance,
+            False if valid inputs do not match within tolerance
         
     Raises:
-        ValueError: If input values are invalid
+        ValueError: If expected calories are non-positive, tolerance is
+            negative, or any macro grams are negative
         
     Example:
         >>> valid = validate_macro_totals(150, 200, 67, 2000)
         >>> print(f"Macros are valid: {valid}")
         Macros are valid: True
     """
-    # Validate inputs
+    # Invalid inputs indicate a caller error and should fail fast.
     if expected_calories <= 0:
-        raise ValueError("expected_calories must be > 0")
+        raise ValueError("expected_calories must be greater than 0")
     if tolerance < 0:
-        raise ValueError("tolerance must be >= 0")
+        raise ValueError("tolerance must be non-negative")
     if protein_grams < 0 or carb_grams < 0 or fat_grams < 0:
-        raise ValueError("Macro grams must be non-negative")
+        raise ValueError("protein_grams, carb_grams, and fat_grams must be non-negative")
     
     # Calculate actual calories from macros
     calculated_calories = (

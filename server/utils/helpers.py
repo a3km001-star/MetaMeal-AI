@@ -131,3 +131,87 @@ def get_food_dataset_metadata() -> Optional[Dict[str, Any]]:
     except Exception:
         return None
 
+
+def normalize_meal_structure(meal_plan: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Normalize a meal plan dictionary to ensure all expected slots exist.
+
+    Required keys:
+    - breakfast
+    - lunch
+    - dinner
+    - snack
+    - supplements
+    """
+    normalized: Dict[str, Any] = {
+        "breakfast": {},
+        "lunch": {},
+        "dinner": {},
+        "snack": {},
+        "supplements": [],
+    }
+
+    if not meal_plan:
+        return normalized
+
+    for key in ("breakfast", "lunch", "dinner", "snack"):
+        value = meal_plan.get(key, {})
+        normalized[key] = value if isinstance(value, dict) else {}
+
+    supplements = meal_plan.get("supplements", [])
+    normalized["supplements"] = supplements if isinstance(supplements, list) else []
+
+    return normalized
+
+
+def calculate_macro_totals(meal_plan: Optional[Dict[str, Any]]) -> Dict[str, float]:
+    """Calculate total protein, carbs, and fat across all meal slots and supplements."""
+    normalized = normalize_meal_structure(meal_plan)
+
+    totals = {
+        "protein": 0.0,
+        "carbs": 0.0,
+        "fat": 0.0,
+    }
+
+    for slot in ("breakfast", "lunch", "dinner", "snack"):
+        meal = normalized.get(slot, {})
+        totals["protein"] += float(meal.get("protein", 0) or 0)
+        meal_carbs = meal.get("carbs")
+        if meal_carbs is None:
+            meal_carbs = meal.get("carbohydrates", 0)
+        totals["carbs"] += float(meal_carbs or 0)
+        totals["fat"] += float(meal.get("fat", 0) or 0)
+
+    for supplement in normalized.get("supplements", []):
+        if not isinstance(supplement, dict):
+            continue
+        totals["protein"] += float(supplement.get("protein", 0) or 0)
+        supplement_carbs = supplement.get("carbs")
+        if supplement_carbs is None:
+            supplement_carbs = supplement.get("carbohydrates", 0)
+        totals["carbs"] += float(supplement_carbs or 0)
+        totals["fat"] += float(supplement.get("fat", 0) or 0)
+
+    return {
+        "protein": round(totals["protein"], 2),
+        "carbs": round(totals["carbs"], 2),
+        "fat": round(totals["fat"], 2),
+    }
+
+
+def calculate_calorie_totals(meal_plan: Optional[Dict[str, Any]]) -> int:
+    """Calculate total calories across all meal slots and supplements."""
+    normalized = normalize_meal_structure(meal_plan)
+
+    calories = 0.0
+    for slot in ("breakfast", "lunch", "dinner", "snack"):
+        meal = normalized.get(slot, {})
+        calories += float(meal.get("calories", 0) or 0)
+
+    for supplement in normalized.get("supplements", []):
+        if not isinstance(supplement, dict):
+            continue
+        calories += float(supplement.get("calories", 0) or 0)
+
+    return int(round(calories))
+

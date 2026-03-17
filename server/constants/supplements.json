@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Whey Protein Shake",
+    "protein": 24,
+    "carbs": 3,
+    "fat": 1,
+    "calories": 117,
+    "diet_type": "veg",
+    "ingredients": "whey protein isolate, water",
+    "instructions": "Mix one scoop with cold water and shake well."
+  },
+  {
+    "name": "Greek Yogurt Cup",
+    "protein": 15,
+    "carbs": 6,
+    "fat": 4,
+    "calories": 120,
+    "diet_type": "veg",
+    "ingredients": "strained yogurt",
+    "instructions": "Serve chilled."
+  },
+  {
+    "name": "Tofu Protein Bowl",
+    "protein": 20,
+    "carbs": 8,
+    "fat": 10,
+    "calories": 202,
+    "diet_type": "vegan",
+    "ingredients": "tofu, spices",
+    "instructions": "Pan-sear the tofu with spices and serve warm."
+  },
+  {
+    "name": "Egg Protein Snack",
+    "protein": 12,
+    "carbs": 1,
+    "fat": 10,
+    "calories": 142,
+    "diet_type": "non_veg",
+    "ingredients": "boiled eggs",
+    "instructions": "Peel the eggs and season lightly before serving."
+  },
+  {
+    "name": "Pea Protein Shake",
+    "protein": 22,
+    "carbs": 4,
+    "fat": 2,
+    "calories": 122,
+    "diet_type": "vegan",
+    "ingredients": "pea protein isolate, water",
+    "instructions": "Blend with water until smooth."
+  },
+  {
+    "name": "Cottage Cheese Bowl",
+    "protein": 18,
+    "carbs": 5,
+    "fat": 4,
+    "calories": 128,
+    "diet_type": "veg",
+    "ingredients": "cottage cheese, black pepper",
+    "instructions": "Serve chilled with black pepper."
+  }
+]
