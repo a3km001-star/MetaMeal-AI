@@ -100,6 +100,32 @@ def _normalize_diet(diet_type: Optional[str]) -> Optional[str]:
     return normalized
 
 
+def _get_dynamic_protein_cap_ratio(
+    user_diet: Optional[str],
+    user_goal: Optional[str],
+    protein_gap: float,
+) -> float:
+    """Return an adaptive supplement cap ratio based on goal and diet constraints."""
+    ratio = SUPPLEMENT_PROTEIN_CAP_RATIO
+    normalized_diet = _normalize_diet(user_diet)
+    normalized_goal = (user_goal or "").strip().lower()
+
+    if normalized_diet == "vegetarian":
+        ratio += 0.08
+    elif normalized_diet == "vegan":
+        ratio += 0.15
+
+    if normalized_goal == "muscle_gain":
+        ratio += 0.06
+    elif normalized_goal == "fat_loss":
+        ratio += 0.03
+
+    if protein_gap >= LARGE_PROTEIN_GAP_THRESHOLD:
+        ratio += 0.08
+
+    return min(max(ratio, SUPPLEMENT_PROTEIN_CAP_RATIO), 0.70)
+
+
 def _is_macro_consistent(supplement: Dict[str, Any]) -> bool:
     protein = float(supplement.get("protein", 0) or 0)
     carbs = float(supplement.get("carbs", 0) or 0)
@@ -171,10 +197,18 @@ def _select_best_supplement(
         return None
 
     target_fill = min(remaining_gap, remaining_allowance)
+
+    def _protein_density(item: Dict[str, Any]) -> float:
+        calories = float(item.get("calories", 0) or 0)
+        protein = float(item.get("protein", 0) or 0)
+        return protein / max(calories, 1.0)
+
     return min(
         viable,
         key=lambda supplement: (
             abs(float(supplement.get("protein", 0) or 0) - target_fill),
+            -_protein_density(supplement),
+            (float(supplement.get("calories", 0) or 0) / max(float(supplement.get("protein", 0) or 0), 1.0)),
             float(supplement.get("calories", 0) or 0),
         ),
     )
@@ -185,6 +219,7 @@ def fill_macro_gap(
     target_macros: Dict[str, float],
     supplements: List[Dict[str, Any]],
     user_diet: Optional[str] = None,
+    user_goal: Optional[str] = None,
     allergies: Optional[List[str]] = None,
     target_calories: Optional[float] = None,
     calorie_tolerance: float = 0.10,
@@ -246,7 +281,8 @@ def fill_macro_gap(
             "warnings": warnings,
         }
 
-    protein_cap = round(float(target_macros.get("protein", 0) or 0) * SUPPLEMENT_PROTEIN_CAP_RATIO, 2)
+    dynamic_cap_ratio = _get_dynamic_protein_cap_ratio(user_diet, user_goal, protein_gap)
+    protein_cap = round(float(target_macros.get("protein", 0) or 0) * dynamic_cap_ratio, 2)
     added_protein = 0.0
     remaining_gap = protein_gap
     max_total_calories = None

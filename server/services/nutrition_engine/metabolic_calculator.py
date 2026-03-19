@@ -10,7 +10,7 @@ This module provides functions to calculate metabolic values including:
 
 from enum import Enum
 from typing import Dict, Tuple, Optional
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from fastapi import HTTPException
 
 
@@ -61,14 +61,16 @@ class MetabolicRequest(BaseModel):
     activity_level: ActivityLevel = Field(..., description="Physical activity level")
     goal: FitnessGoal = Field(..., description="Fitness goal")
 
-    @validator('weight')
+    @field_validator("weight")
+    @classmethod
     def validate_weight(cls, v):
         """Validate weight is reasonable."""
         if v < 30 or v > 300:
             raise ValueError("Weight must be between 30 and 300 kg")
         return v
 
-    @validator('height')
+    @field_validator("height")
+    @classmethod
     def validate_height(cls, v):
         """Validate height is reasonable."""
         if v < 100 or v > 250:
