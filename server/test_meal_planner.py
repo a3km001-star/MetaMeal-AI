@@ -108,8 +108,6 @@ def test_basic_meal_plan():
     print(f"\n✓ Metabolic: BMR={plan.bmr}, TDEE={plan.tdee}, Target={plan.calorie_target}")
     print(f"✓ Macros: P={plan.macros['protein']:.0f}g, C={plan.macros['carbohydrates']:.0f}g, F={plan.macros['fat']:.0f}g")
     print(f"✓ Meal Plan: {plan.meal_count} meals, {plan.total_calories} kcal, {plan.calorie_accuracy:.1f}% accuracy")
-    
-    return plan
 
 
 def test_allergies_meal_plan():
@@ -131,8 +129,6 @@ def test_allergies_meal_plan():
     print(f"\n✓ Target: {plan.calorie_target} kcal/day ({plan.meal_count} meals)")
     print(f"✓ Accuracy: {plan.calorie_accuracy:.1f}%")
     print(f"✓ All {plan.meal_count} meals are allergen-safe")
-
-    return plan
 
 
 def test_helper_functions():
@@ -178,8 +174,6 @@ def test_helper_functions():
     assert 'protein' in comparison, "Missing protein in comparison"
     assert comparison['calories']['percentage'] > 0, "Invalid calorie percentage"
     print(f"✓ compare_plan_to_targets: {comparison['calories']['percentage']:.1f}% calorie match")
-    
-    return True
 
 
 def test_different_goals():
@@ -229,8 +223,6 @@ def test_different_goals():
     assert maintenance_cal < muscle_gain_cal, "Maintenance should have fewer calories than muscle gain"
     
     print(f"\n✓ Calorie targets correct: {fat_loss_cal:.0f} < {maintenance_cal:.0f} < {muscle_gain_cal:.0f}")
-    
-    return True
 
 
 def test_edge_cases():
@@ -264,8 +256,6 @@ def test_edge_cases():
         else:
             print(f"✗ Unexpected error: {error_msg}")
             raise
-    
-    return True
 
 
 def run_all_tests():

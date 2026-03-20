@@ -22,13 +22,14 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import HTTPException
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from services.nutrition_engine.constraint_solver import (
     MealPlan,
     ensure_variety,
     filter_by_allergies,
     filter_by_diet,
+    generate_macro_aware_meal_plan,
     generate_meal_plan,
 )
 from services.nutrition_engine.macro_split import MacroSplit, calculate_macros
@@ -55,6 +56,158 @@ MIN_CALORIES_BY_SEX: Dict[Sex, int] = {
 }
 MEAL_SLOTS: Tuple[str, ...] = ("breakfast", "lunch", "dinner", "snack")
 MAX_REGENERATION_ATTEMPTS = 5
+MIN_PORTION_GRAMS = 80.0
+PORTION_MULTIPLIERS: Tuple[float, ...] = (1.0, 1.5, 2.0, 2.5, 3.0)
+
+
+def _coerce_float(value: Any, default: float = 0.0) -> float:
+    """Safely convert incoming values to float."""
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _get_age_based_single_portion_grams(age: int) -> float:
+    """Return a single-portion gram weight derived from age.
+
+    Dataset nutrition values are treated as per-100g values. This function
+    provides the per-user portion size used to scale those values into actual
+    consumed meal macros.
+    """
+    if age <= 18:
+        return 90.0
+    if age <= 29:
+        return 110.0
+    if age <= 44:
+        return 105.0
+    if age <= 59:
+        return 95.0
+    return 85.0
+
+
+def _scale_from_per_100g(value_per_100g: float, portion_grams: float) -> float:
+    """Scale a per-100g nutrient value to a concrete portion size."""
+    return round((value_per_100g / 100.0) * portion_grams, 2)
+
+
+def _normalize_food_for_portion_scaling(food: Dict[str, Any], portion_grams: float) -> Dict[str, Any]:
+    """Normalize dataset row and scale macros from per-100g to actual portion."""
+    calories_per_100g = _coerce_float(food.get("Calories", food.get("Calories (kcal)", 0)))
+    protein_per_100g = _coerce_float(food.get("Protein", food.get("Protein(g)", 0)))
+    carbs_per_100g = _coerce_float(food.get("Carbohydrates", food.get("Carbohydrates (g)", 0)))
+    fat_per_100g = _coerce_float(food.get("Fat", food.get("Fat (g)", 0)))
+
+    normalized: Dict[str, Any] = {
+        "RecipeName": food.get("RecipeName", "Unknown Meal"),
+        "DisplayName": food.get("RecipeName", "Unknown Meal"),
+        "Ingredients": food.get("Ingredients") or food.get("Cleaned-Ingredients") or "",
+        "Instructions": food.get("Instructions") or food.get("TranslatedInstructions") or "",
+        "DietType": food.get("DietType") or food.get("vegornonveg") or "Unknown",
+        "Calories": _scale_from_per_100g(calories_per_100g, portion_grams),
+        "Protein": _scale_from_per_100g(protein_per_100g, portion_grams),
+        "Carbohydrates": _scale_from_per_100g(carbs_per_100g, portion_grams),
+        "Fat": _scale_from_per_100g(fat_per_100g, portion_grams),
+        "portion_grams": round(portion_grams, 2),
+        "serving_multiplier": 1.0,
+        "base_recipe_name": food.get("RecipeName", "Unknown Meal"),
+        "macro_values_per_100g": {
+            "Calories": round(calories_per_100g, 4),
+            "Protein": round(protein_per_100g, 4),
+            "Carbohydrates": round(carbs_per_100g, 4),
+            "Fat": round(fat_per_100g, 4),
+        },
+    }
+
+    return normalized
+
+
+def _is_reasonable_nutrition_row(normalized: Dict[str, Any]) -> bool:
+    """Return False for obviously invalid/outlier macro rows.
+
+    This protects the planner from malformed dataset values (for example,
+    accidental 10x/100x protein entries) that can derail optimization.
+    """
+    calories = _coerce_float(normalized.get("Calories", 0))
+    protein = _coerce_float(normalized.get("Protein", 0))
+    carbs = _coerce_float(normalized.get("Carbohydrates", 0))
+    fat = _coerce_float(normalized.get("Fat", 0))
+
+    if calories <= 0 or protein < 0 or carbs < 0 or fat < 0:
+        return False
+
+    macro_kcal = (4 * protein) + (4 * carbs) + (9 * fat)
+    kcal_ratio = macro_kcal / max(calories, 1e-6)
+
+    if kcal_ratio < 0.35 or kcal_ratio > 4.0:
+        return False
+    if protein > 150 or carbs > 250 or fat > 150:
+        return False
+
+    return True
+
+
+def _expand_food_portion_variants(base_foods: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Create meal variants at 1x/1.5x/2x/2.5x/3x serving multipliers."""
+    expanded: List[Dict[str, Any]] = []
+
+    for food in base_foods:
+        base_name = str(food.get("RecipeName", "Unknown Meal"))
+        base_calories = _coerce_float(food.get("Calories", 0))
+        base_protein = _coerce_float(food.get("Protein", 0))
+        base_carbs = _coerce_float(food.get("Carbohydrates", 0))
+        base_fat = _coerce_float(food.get("Fat", 0))
+        base_portion = _coerce_float(food.get("portion_grams", 0))
+
+        for mult in PORTION_MULTIPLIERS:
+            variant = dict(food)
+            variant["Calories"] = round(base_calories * mult, 2)
+            variant["Protein"] = round(base_protein * mult, 2)
+            variant["Carbohydrates"] = round(base_carbs * mult, 2)
+            variant["Fat"] = round(base_fat * mult, 2)
+            variant["portion_grams"] = round(base_portion * mult, 2)
+            variant["serving_multiplier"] = mult
+            variant["base_recipe_name"] = base_name
+            variant["DisplayName"] = f"{base_name} ({mult:.1f}x)" if mult != 1.0 else base_name
+
+            if _coerce_float(variant.get("Calories", 0), 0) <= 1300 and _is_reasonable_nutrition_row(variant):
+                expanded.append(variant)
+
+    return expanded
+
+
+def _prepare_foods_for_profile(foods: List[Any], user_profile: "UserProfile") -> List[Dict[str, Any]]:
+    """Convert dataset rows into age-adjusted portion nutrition rows."""
+    portion_grams = max(_get_age_based_single_portion_grams(user_profile.age), MIN_PORTION_GRAMS)
+    normalized_foods: List[Dict[str, Any]] = []
+
+    for row in foods:
+        if isinstance(row, dict):
+            normalized = _normalize_food_for_portion_scaling(row, portion_grams)
+            if (
+                normalized["RecipeName"].strip()
+                and normalized["Ingredients"].strip()
+                and _is_reasonable_nutrition_row(normalized)
+            ):
+                normalized_foods.append(normalized)
+            continue
+
+        if isinstance(row, list):
+            # Some dataset snapshots may contain a nested list item; flatten it.
+            for nested in row:
+                if isinstance(nested, dict):
+                    normalized = _normalize_food_for_portion_scaling(nested, portion_grams)
+                    if (
+                        normalized["RecipeName"].strip()
+                        and normalized["Ingredients"].strip()
+                        and _is_reasonable_nutrition_row(normalized)
+                    ):
+                        normalized_foods.append(normalized)
+            continue
+
+    return _expand_food_portion_variants(normalized_foods)
 
 
 def _sort_high_protein_foods(foods: List[Dict[str, Any]], calorie_target: float) -> List[Dict[str, Any]]:
@@ -119,11 +272,7 @@ def _generate_beam_search_plan(
 
     ranked_foods = sorted(
         foods,
-        key=lambda food: (
-            abs(float(food.get("Calories", 0) or 0) - average_meal_calories),
-            -(float(food.get("Protein", 0) or 0) / max(float(food.get("Calories", 1) or 1), 1.0)),
-            -float(food.get("Protein", 0) or 0),
-        ),
+        key=lambda food: abs(float(food.get("Calories", 0) or 0) - average_meal_calories),
     )
     candidate_foods = ranked_foods[:80]
 
@@ -142,10 +291,10 @@ def _generate_beam_search_plan(
         next_beam: List[Tuple[List[Dict[str, Any]], Tuple[float, float, float, float], float]] = []
 
         for selected_meals, totals, _ in beam:
-            used_names = {meal.get("RecipeName", "") for meal in selected_meals}
+            used_names = {meal.get("base_recipe_name") or meal.get("RecipeName", "") for meal in selected_meals}
 
             for food in candidate_foods:
-                recipe_name = str(food.get("RecipeName", ""))
+                recipe_name = str(food.get("base_recipe_name") or food.get("RecipeName", ""))
                 if recipe_name in used_names:
                     continue
                 if not ensure_variety(selected_meals, food, max_same_ingredients=5):
@@ -204,17 +353,36 @@ class UserProfile(BaseModel):
     diet_type: Optional[str] = Field(None, description="Diet preference")
     allergies: Optional[List[str]] = Field(default_factory=list, description="Allergens to avoid")
 
-    @validator("weight")
+    @field_validator("weight")
+    @classmethod
     def validate_weight(cls, value: float) -> float:
         if value < 30 or value > 300:
             raise ValueError("Weight must be between 30 and 300 kg")
         return value
 
-    @validator("height")
+    @field_validator("height")
+    @classmethod
     def validate_height(cls, value: float) -> float:
         if value < 100 or value > 250:
             raise ValueError("Height must be between 100 and 250 cm")
         return value
+
+
+def _compute_base_meal_target_ratio(user_profile: UserProfile, attempt: int) -> float:
+    """Compute an adaptive calorie ratio reserved for meal selection before supplements."""
+    ratio = 0.90 if attempt <= 3 else 0.88
+    diet = (user_profile.diet_type or "").strip().lower()
+
+    if diet in {"veg", "vegetarian", "vegan"}:
+        ratio += 0.03
+    if user_profile.goal == FitnessGoal.MAINTENANCE:
+        ratio += 0.03
+    elif user_profile.goal == FitnessGoal.MUSCLE_GAIN:
+        ratio += 0.02
+    if attempt >= 4:
+        ratio += 0.05
+
+    return min(max(ratio, 0.88), 1.0)
 
 
 class MealItem(BaseModel):
@@ -308,10 +476,49 @@ def _adjust_calories_for_goal(tdee: float, goal: FitnessGoal, sex: Sex) -> float
     return round(calorie_target, 2)
 
 
+def _adapt_macros_for_diet_constraints(
+    macros: MacroSplit,
+    calorie_target: float,
+    user_profile: UserProfile,
+) -> Tuple[MacroSplit, List[str]]:
+    """Adjust macro targets for constrained diet cases to improve feasibility."""
+    warnings: List[str] = []
+    diet_key = (user_profile.diet_type or "").strip().lower()
+
+    if diet_key == "vegan" and user_profile.goal == FitnessGoal.MAINTENANCE:
+        # Vegan plans in this dataset tend to be relatively higher in fat and lower in carbs.
+        # Keep protein target unchanged but re-balance remaining calories toward fat.
+        protein_grams = float(macros.protein_grams)
+        protein_calories = protein_grams * 4
+        fat_percentage = max(float(macros.fat_percentage), 35.0)
+        fat_calories = calorie_target * (fat_percentage / 100.0)
+        fat_grams = round(fat_calories / 9.0, 1)
+        carb_calories = max(0.0, calorie_target - protein_calories - fat_calories)
+        carb_grams = round(carb_calories / 4.0, 1)
+        protein_percentage = round((protein_calories / calorie_target) * 100, 1) if calorie_target > 0 else 0.0
+        carb_percentage = round((carb_calories / calorie_target) * 100, 1) if calorie_target > 0 else 0.0
+
+        adjusted = macros.model_copy(
+            update={
+                "carb_grams": carb_grams,
+                "fat_grams": fat_grams,
+                "carb_calories": round(carb_calories, 1),
+                "fat_calories": round(fat_calories, 1),
+                "protein_percentage": protein_percentage,
+                "carb_percentage": carb_percentage,
+                "fat_percentage": round(fat_percentage, 1),
+            }
+        )
+        warnings.append("Macro targets adjusted for vegan maintenance feasibility (higher fat, lower carbs).")
+        return adjusted, warnings
+
+    return macros, warnings
+
+
 def _normalize_raw_meal(raw_meal: Dict[str, Any]) -> Dict[str, Any]:
     """Normalize raw solver output into a slot-based meal dictionary."""
     return {
-        "name": raw_meal.get("name") or raw_meal.get("RecipeName") or "Unknown Meal",
+        "name": raw_meal.get("name") or raw_meal.get("DisplayName") or raw_meal.get("RecipeName") or "Unknown Meal",
         "calories": round(float(raw_meal.get("calories", raw_meal.get("Calories", 0)) or 0), 2),
         "protein": round(float(raw_meal.get("protein", raw_meal.get("Protein", 0)) or 0), 2),
         "carbs": round(float(raw_meal.get("carbs", raw_meal.get("Carbohydrates", 0)) or 0), 2),
@@ -319,6 +526,9 @@ def _normalize_raw_meal(raw_meal: Dict[str, Any]) -> Dict[str, Any]:
         "ingredients": raw_meal.get("ingredients") or raw_meal.get("Ingredients") or "",
         "instructions": raw_meal.get("instructions") or raw_meal.get("Instructions") or "",
         "diet_type": raw_meal.get("diet_type") or raw_meal.get("DietType") or "Unknown",
+        "portion_grams": round(float(raw_meal.get("portion_grams", 0) or 0), 2),
+        "serving_multiplier": round(float(raw_meal.get("serving_multiplier", 1.0) or 1.0), 2),
+        "macro_values_per_100g": raw_meal.get("macro_values_per_100g", {}),
     }
 
 
@@ -476,8 +686,10 @@ def _generate_validated_meal_plan(user_profile: UserProfile, foods: List[Dict[st
         goal=user_profile.goal,
         weight_kg=user_profile.weight,
     )
+    macros, planner_macro_warnings = _adapt_macros_for_diet_constraints(macros, calorie_target, user_profile)
 
-    filtered_foods = filter_by_diet(foods, user_profile.diet_type)
+    prepared_foods = _prepare_foods_for_profile(foods, user_profile)
+    filtered_foods = filter_by_diet(prepared_foods, user_profile.diet_type)
     filtered_foods = filter_by_allergies(filtered_foods, user_profile.allergies or [])
     supplements_dataset = load_supplements()
 
@@ -488,21 +700,41 @@ def _generate_validated_meal_plan(user_profile: UserProfile, foods: List[Dict[st
         )
 
     last_error = "Validation failed"
+    best_candidate_plan: Optional[CompleteMealPlan] = None
+    best_candidate_structure: Optional[Dict[str, Dict[str, Any]]] = None
+    best_candidate_score = float("inf")
 
     for attempt in range(1, MAX_REGENERATION_ATTEMPTS + 1):
         try:
-            high_protein_bias = attempt >= 2
-            candidate_foods = _sort_high_protein_foods(filtered_foods, calorie_target) if high_protein_bias else list(filtered_foods)
-            if attempt >= 3:
-                solver_plan = _generate_beam_search_plan(candidate_foods, calorie_target, macros)
+            diet_key = (user_profile.diet_type or "").strip().lower()
+            carb_priority_mode = (diet_key in {"vegan"}) and (user_profile.goal == FitnessGoal.MAINTENANCE)
+            candidate_foods = list(filtered_foods)
+            # Leave headroom so protein supplements can fill gaps without breaching calorie bounds.
+            base_target_ratio = _compute_base_meal_target_ratio(user_profile, attempt)
+            base_meal_calorie_target = calorie_target * base_target_ratio
+            if attempt >= 4:
+                solver_plan = _generate_beam_search_plan(candidate_foods, base_meal_calorie_target, macros)
+            elif attempt >= 2:
+                macro_aware_tolerance = 0.15 if carb_priority_mode else (0.12 if attempt == 2 else 0.15)
+                solver_plan = generate_macro_aware_meal_plan(
+                    foods=candidate_foods,
+                    calorie_target=base_meal_calorie_target,
+                    protein_target=macros.protein_grams,
+                    carb_target=macros.carb_grams,
+                    fat_target=macros.fat_grams,
+                    diet_type=None,
+                    allergies=None,
+                    calorie_tolerance=macro_aware_tolerance,
+                    max_attempts=250,
+                )
             else:
                 solver_plan = generate_meal_plan(
                     foods=candidate_foods,
-                    calorie_target=calorie_target,
+                    calorie_target=base_meal_calorie_target,
                     max_meals=4,
                     calorie_tolerance=0.10,
-                    max_attempts=200 if high_protein_bias else 100,
-                    shuffle=not high_protein_bias,
+                    max_attempts=150,
+                    shuffle=True,
                 )
             logger.info("meal plan generated")
 
@@ -517,6 +749,7 @@ def _generate_validated_meal_plan(user_profile: UserProfile, foods: List[Dict[st
                 target_macros,
                 supplements_dataset,
                 user_diet=user_profile.diet_type,
+                user_goal=user_profile.goal.value,
                 allergies=user_profile.allergies or [],
                 target_calories=calorie_target,
                 calorie_tolerance=0.10,
@@ -529,8 +762,27 @@ def _generate_validated_meal_plan(user_profile: UserProfile, foods: List[Dict[st
                 macros=macros,
                 structured_plan=structured_plan,
                 supplements=supplement_result["supplements"],
-                warnings=supplement_result["warnings"],
+                warnings=[*planner_macro_warnings, *supplement_result["warnings"]],
             )
+
+            candidate_score = _score_totals(
+                (
+                    candidate_plan.total_calories,
+                    candidate_plan.total_protein,
+                    candidate_plan.total_carbs,
+                    candidate_plan.total_fat,
+                ),
+                (
+                    calorie_target,
+                    macros.protein_grams,
+                    macros.carb_grams,
+                    macros.fat_grams,
+                ),
+            )
+            if candidate_score < best_candidate_score:
+                best_candidate_score = candidate_score
+                best_candidate_plan = candidate_plan
+                best_candidate_structure = structured_plan
 
             is_valid = validate_generated_plan(
                 candidate_plan,
@@ -546,7 +798,7 @@ def _generate_validated_meal_plan(user_profile: UserProfile, foods: List[Dict[st
                 continue
 
             formatted_plan = format_meal_plan(structured_plan)
-            final_plan = candidate_plan.copy(update={"meal_plan": formatted_plan})
+            final_plan = candidate_plan.model_copy(update={"meal_plan": formatted_plan})
             logger.info("final plan returned")
             return final_plan
 
@@ -566,6 +818,19 @@ def _generate_validated_meal_plan(user_profile: UserProfile, foods: List[Dict[st
                 MAX_REGENERATION_ATTEMPTS,
                 last_error,
             )
+
+    if best_candidate_plan and best_candidate_structure:
+        formatted_plan = format_meal_plan(best_candidate_structure)
+        fallback_warnings = list(best_candidate_plan.warnings)
+        fallback_warnings.append(
+            "Returned best available plan after retries. Targets were partially unmet under current constraints."
+        )
+        return best_candidate_plan.model_copy(
+            update={
+                "meal_plan": formatted_plan,
+                "warnings": fallback_warnings,
+            }
+        )
 
     raise HTTPException(
         status_code=400,

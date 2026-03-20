@@ -53,12 +53,18 @@ def format_single_meal(meal: Dict[str, Any]) -> Dict[str, Any]:
 	"""
 	_validate_meal_dict(meal, "meal")
 
-	return {
+	formatted = {
 		"name": meal["name"].strip(),
 		"calories": round(float(meal["calories"]), 2),
 		"ingredients": meal["ingredients"].strip(),
 		"instructions": meal["instructions"].strip(),
 	}
+
+	# Preserve optional serving scale metadata when provided by the planner.
+	if "serving_multiplier" in meal:
+		formatted["serving_multiplier"] = round(float(meal.get("serving_multiplier", 1.0) or 1.0), 2)
+
+	return formatted
 
 
 def format_meal_plan(meal_plan: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:

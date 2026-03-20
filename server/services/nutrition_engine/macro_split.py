@@ -40,8 +40,8 @@ MACRO_RATIOS: Dict[FitnessGoal, Tuple[float, float, float]] = {
 
 # Recommended protein intake per kg of body weight (for protein-priority approach)
 PROTEIN_PER_KG: Dict[FitnessGoal, float] = {
-    FitnessGoal.FAT_LOSS: 2.2,      # Higher to preserve muscle in deficit
-    FitnessGoal.MUSCLE_GAIN: 2.0,   # Optimal for muscle building
+    FitnessGoal.FAT_LOSS: 1.8,      # Realistic high-protein target for sustainable deficit plans
+    FitnessGoal.MUSCLE_GAIN: 1.8,   # Practical hypertrophy target with mixed-food datasets
     FitnessGoal.MAINTENANCE: 1.8,   # Maintenance level
 }
 
