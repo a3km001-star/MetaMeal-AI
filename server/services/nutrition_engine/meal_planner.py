@@ -42,8 +42,8 @@ from services.nutrition_engine.spec_compliant_steps import (
     get_age_multiply_factor,
     improve_assignment_with_single_slot_swaps,
     is_plan_valid,
-    optimize_bucket_assignment,
     redistribute_empty_slots,
+    select_meals_with_diversity,
     scale_recipe_by_factor,
     split_calories_by_meal_slot,
     split_macros_by_meal_slot,
@@ -155,6 +155,7 @@ class UserProfile(BaseModel):
     goal: FitnessGoal = Field(..., description="Fitness goal")
     diet_type: Optional[str] = Field(None, description="Diet preference")
     allergies: Optional[List[str]] = Field(default_factory=list, description="Allergens to avoid")
+    last_meals: Optional[Dict[str, List[str]]] = Field(default_factory=dict, description="Recent meals by slot")
 
     @field_validator("weight")
     @classmethod
@@ -366,14 +367,20 @@ def _generate_validated_meal_plan_spec_compliant(
             })
             logger.info(f"Slot targets: {slot_calorie_targets}")
 
-            # STEP 7 + STEP 8: Error-based matching and bucket assignment.
-            logger.info("STEP 7/8: Running global error-based slot assignment")
-            assigned_slots, used_recipes, assignment_error = optimize_bucket_assignment(
+            # STEP 7 + STEP 8: Diversity-aware matching and bucket assignment.
+            logger.info("STEP 7/8: Running diversity-aware slot assignment")
+            assigned_slots, used_recipes, selection_meta = select_meals_with_diversity(
                 scaled_foods,
                 slot_macro_targets,
-                tolerance_multiplier=1.0,
+                meal_history=user_profile.last_meals or {},
             )
-            logger.info(f"Assignment total error: {assignment_error}")
+            logger.info(f"Selection meta: {selection_meta}")
+
+            fallback_level = int(selection_meta.get("fallback_level", 0) or 0)
+            if fallback_level > 0:
+                global_warnings.append(
+                    f"Meal selection fallback level {fallback_level} was used to guarantee output."
+                )
 
             # STEP 9: Initial validity check.
             logger.info("STEP 9: Checking initial slot validity")
@@ -597,6 +604,7 @@ def _build_complete_meal_plan(
             "goal": user_profile.goal.value,
             "diet_type": user_profile.diet_type,
             "allergies": user_profile.allergies or [],
+            "last_meals": user_profile.last_meals or {},
         },
         bmr=round(bmr, 2),
         tdee=round(tdee, 2),
