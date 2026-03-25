@@ -306,7 +306,7 @@ def test_step6_bucket_assignment():
         recipe_breakfast,
         slot_targets,
         {"breakfast": None, "lunch": None, "dinner": None, "snack": None},
-        set()
+        set()  # Now uses Set[int] of object ids
     )
     results.assert_equal(assigned, "breakfast", "Recipe assigned to breakfast (best match)")
 
@@ -322,8 +322,8 @@ def test_step6_bucket_assignment():
     assigned = assign_recipe_to_slot(
         recipe_lunch,
         slot_targets,
-        {"breakfast": {"RecipeName": "Oatmeal"}, "lunch": None, "dinner": None, "snack": None},
-        {"Oatmeal"}
+        {"breakfast": recipe_breakfast, "lunch": None, "dinner": None, "snack": None},
+        {id(recipe_breakfast)}  # Track by object id
     )
     results.assert_equal(assigned, "lunch", "Recipe assigned to lunch when breakfast full")
 
@@ -332,7 +332,7 @@ def test_step6_bucket_assignment():
         recipe_lunch,
         slot_targets,
         {"breakfast": None, "lunch": None, "dinner": None, "snack": None},
-        {"Chicken Rice"}  # Recipe already used
+        {id(recipe_lunch)}  # Recipe already used (by object id)
     )
     results.assert_equal(assigned, None, "Duplicate recipe prevented")
 
@@ -447,8 +447,7 @@ def test_edge_cases():
     scaled = scale_recipe_by_factor(recipe_zero, 2.5)
     results.assert_equal(scaled["Calories"], 0.0, "Zero recipe stays zero")
 
-    # Edge case 6: Negative calorie (should be handled gracefully)
-    # This tests robustness
+    # Edge case 6: Snack recipe with reasonable macros
     slot_targets = {
         "breakfast": {"calories": 500.0, "protein": 50.0},
         "lunch": {"calories": 700.0, "protein": 70.0},
@@ -456,7 +455,6 @@ def test_edge_cases():
         "snack": {"calories": 200.0, "protein": 15.0},
     }
 
-    # Snack with reasonable macros
     acceptable_snack = {
         "RecipeName": "Protein Bar",
         "Calories": 195.0,
@@ -486,23 +484,38 @@ def test_macro_accuracy():
     print("\n[MACRO ACCURACY] Testing Tolerance Thresholds")
     results = TestResults()
 
-    # Test calorie tolerance: ±10%
+    # Test calorie threshold using actual implementation function
+    # Using breakfast which has ±10% tolerance
     calorie_target = 2000.0
-    calorie_min = calorie_target * 0.9  # 1800
-    calorie_max = calorie_target * 1.1  # 2200
 
-    results.assert_true(1800 <= 1900 <= 2200, "1900 within ±10% of 2000")
-    results.assert_true(not (1800 <= 1700 <= 2200), "1700 outside ±10% of 2000")
-    results.assert_true(not (1800 <= 2300 <= 2200), "2300 outside ±10% of 2000")
+    results.assert_true(
+        check_calorie_threshold(1900.0, calorie_target, "breakfast"),
+        "1900 within ±10% of 2000 (breakfast)"
+    )
+    results.assert_true(
+        not check_calorie_threshold(1700.0, calorie_target, "breakfast"),
+        "1700 outside ±10% of 2000 (breakfast)"
+    )
+    results.assert_true(
+        not check_calorie_threshold(2300.0, calorie_target, "breakfast"),
+        "2300 outside ±10% of 2000 (breakfast)"
+    )
 
-    # Test macro tolerance: ±20%
+    # Test macro tolerance using actual implementation function
     protein_target = 200.0
-    protein_min = protein_target * 0.8  # 160
-    protein_max = protein_target * 1.2  # 240
 
-    results.assert_true(160 <= 200 <= 240, "200g within ±20% of 200g")
-    results.assert_true(160 <= 170 <= 240, "170g within ±20% of 200g")
-    results.assert_true(not (160 <= 150 <= 240), "150g outside ±20% of 200g")
+    results.assert_true(
+        check_protein_threshold(200.0, protein_target),
+        "200g within ±20% of 200g"
+    )
+    results.assert_true(
+        check_protein_threshold(170.0, protein_target),
+        "170g within ±20% of 200g"
+    )
+    results.assert_true(
+        not check_protein_threshold(150.0, protein_target),
+        "150g outside ±20% of 200g"
+    )
 
     print("[MACRO ACCURACY] Results:", f"Passed {results.passed}/{results.passed + results.failed}")
     return results

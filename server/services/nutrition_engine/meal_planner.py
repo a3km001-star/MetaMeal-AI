@@ -323,7 +323,11 @@ def _generate_validated_meal_plan_spec_compliant(
             if attempt >= 4:
                 logger.info("FALLBACK: Using increased multiply_factor")
                 multiply_factor = 2.5
-                scaled_foods = [scale_recipe_by_factor(f, multiply_factor / get_age_multiply_factor(user_profile.age)) for f in filtered_foods]
+                age_factor = get_age_multiply_factor(user_profile.age)
+                if not age_factor or age_factor <= 0:
+                    logger.warning(f"Invalid age_factor {age_factor} for age {user_profile.age}, using 1.6 as fallback")
+                    age_factor = 1.6
+                scaled_foods = [scale_recipe_by_factor(f, multiply_factor / age_factor) for f in filtered_foods]
             else:
                 scaled_foods = list(filtered_foods)
 
@@ -341,7 +345,7 @@ def _generate_validated_meal_plan_spec_compliant(
             logger.info("STEP 6: Assigning recipes to meal slots")
             sorted_foods = sort_recipes_for_assignment(scaled_foods, slot_macro_targets)
             assigned_slots: Dict[str, Optional[Dict[str, Any]]] = {slot: None for slot in MEAL_SLOTS}
-            used_recipes: Set[str] = set()
+            used_recipes: Set[int] = set()  # Track by object id instead of name
 
             for recipe in sorted_foods:
                 assigned_slot = assign_recipe_to_slot(
@@ -352,7 +356,7 @@ def _generate_validated_meal_plan_spec_compliant(
                 )
                 if assigned_slot:
                     assigned_slots[assigned_slot] = recipe
-                    used_recipes.add(recipe.get("RecipeName", "Unknown"))
+                    used_recipes.add(id(recipe))  # Use object id for unique identification
                     logger.info(f"  Assigned to {assigned_slot}: {recipe.get('RecipeName')}")
 
             # STEP 7: Validity Check
@@ -437,12 +441,13 @@ def _generate_validated_meal_plan_spec_compliant(
         except Exception as exc:
             last_error = str(exc)
             logger.warning(f"Attempt {attempt} failed: {last_error}")
-            best_candidate_plan = None
+            # Keep best_candidate_plan from previous attempts for fallback
 
     # Fallback: return best candidate if available
     if best_candidate_plan:
         logger.info("Returning best candidate from attempts with warnings")
-        formatted_plan = format_meal_plan(structured_plan)
+        # Use the meal_plan already in best_candidate_plan or reconstruct from it
+        formatted_plan = best_candidate_plan.meal_plan or {}
         warnings = list(best_candidate_plan.warnings or [])
         warnings.append("Returned best available plan after all retry attempts.")
         return best_candidate_plan.model_copy(

@@ -202,7 +202,7 @@ def split_macros_by_meal_slot(
 
     Example:
         >>> cals = split_calories_by_meal_slot(2000)
-        >>> macros = {"protein": 200, "carbs": 150, "fat": 70}
+        >>> macros = {"protein": 200, "carbohydrates": 150, "fat": 70}
         >>> split = split_macros_by_meal_slot(cals, macros)
         >>> split["breakfast"]["protein"]
         50.0
@@ -306,7 +306,7 @@ def assign_recipe_to_slot(
     recipe: Dict[str, Any],
     slot_targets: Dict[str, Dict[str, float]],
     assigned_slots: Dict[str, Optional[Dict[str, Any]]],
-    used_recipes: Set[str],
+    used_recipes: Set[int],
 ) -> Optional[str]:
     """Assign recipe to best-fit meal slot (STEP 6).
 
@@ -315,14 +315,14 @@ def assign_recipe_to_slot(
          a. Check calorie threshold (±10% breakfast, ±12% others)
          b. Check protein threshold (±20%)
       2. Find slot with minimum calorie error
-      3. Prevent duplicate recipe usage
+      3. Prevent duplicate recipe usage (by object id)
       4. Return slot name or None if no valid assignment
 
     Args:
         recipe: Recipe dict with Calories, Protein, Carbohydrates, Fat
         slot_targets: Dict mapping slot name to target macros
         assigned_slots: Dict mapping slot name to assigned recipe (or None)
-        used_recipes: Set of recipe names already used
+        used_recipes: Set of recipe object ids already used
 
     Returns:
         Slot name ("breakfast", "lunch", etc.) or None if no valid assignment
@@ -343,9 +343,9 @@ def assign_recipe_to_slot(
         except (ValueError, TypeError):
             return 0.0
 
-    # Check recipe duplication
-    recipe_name = recipe.get("RecipeName", "Unknown")
-    if recipe_name in used_recipes:
+    # Check recipe duplication by object id
+    recipe_id = id(recipe)
+    if recipe_id in used_recipes:
         return None
 
     recipe_calories = safe_float(recipe.get("Calories", 0))
@@ -478,8 +478,8 @@ def get_redistribution_target(
         Name of slot to take from, or None if not recommended
 
     Example:
-        >>> get_redistribution_target(["breakfast", "snack"], ["lunch", "dinner"])
-        "snack"  # Snack has smallest calorie requirement
+        >>> get_redistribution_target(["breakfast"], ["lunch", "dinner", "snack"])
+        "snack"  # Snack has smallest calorie requirement and is filled
     """
     if "snack" in filled_slots and len(empty_slots) > 0:
         return "snack"  # Snack has 10% requirement, easiest to reallocate
@@ -524,7 +524,12 @@ def sort_recipes_for_assignment(
         except (ValueError, TypeError):
             return 0.0
 
-    avg_slot_calories = sum(slot_targets[s]["calories"] for s in MEAL_SLOTS) / 4
+    # Defensively compute average slot calories
+    total_slot_calories = sum(
+        slot_targets.get(s, {}).get("calories", 0) if isinstance(slot_targets.get(s), dict) else 0
+        for s in MEAL_SLOTS
+    )
+    avg_slot_calories = total_slot_calories / max(1, len(MEAL_SLOTS))
     if avg_slot_calories <= 0:
         avg_slot_calories = 1.0
 

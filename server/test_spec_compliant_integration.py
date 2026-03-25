@@ -93,23 +93,21 @@ def test_basic_meal_generation():
 
         results.test_case("Food dataset loaded", test2)
 
-        # Generate plan (might fail due to seed/randomness, but test structure)
+        # Generate plan
         def test3():
             """Generate meal plan"""
             foods = load_food_dataset()
-            try:
-                plan = _generate_validated_meal_plan_spec_compliant(user_profile, foods)
-                assert plan is not None, "Plan should be generated"
-                print(f"    Plan generated with {len(plan.meal_plan)} meals")
-            except Exception as e:
-                # If generation fails, it's OK - we're testing structure
-                print(f"    Generation note: {str(e)[:50]}...")
+            plan = _generate_validated_meal_plan_spec_compliant(user_profile, foods)
+            assert plan is not None, "Plan should be generated"
+            # Plan may be a fallback with warnings, so just verify we got something
+            print(f"    Plan generated with {len(plan.meal_plan) if plan.meal_plan else 0} meals")
 
         results.test_case("Meal plan generation initiated", test3)
 
     except Exception as e:
         print(f"  ERROR in setup: {str(e)}")
         results.failed += 1
+        results.errors.append(f"Setup error: {str(e)}")
 
     print(f"Basic Generation Results: {results.passed}/{results.passed + results.failed}")
     return results
@@ -379,7 +377,9 @@ def run_integration_tests():
             total_failed += results.failed
         except Exception as e:
             print(f"\nERROR in {suite_name}: {str(e)}")
-            suite_results[suite_name] = None
+            suite_results[suite_name] = IntegrationTestResults()
+            suite_results[suite_name].failed = 1
+            total_failed += 1
 
     # Print summary
     print("\n" + "="*70)
@@ -387,9 +387,13 @@ def run_integration_tests():
     print("="*70)
 
     for suite_name, results in suite_results.items():
-        if results:
+        if results and results.failed == 0:
             total = results.passed + results.failed
-            status = "PASS" if results.failed == 0 else "FAIL"
+            status = "PASS"
+            print(f"  {suite_name:30} {status:6} ({results.passed}/{total})")
+        elif results:
+            total = results.passed + results.failed
+            status = "FAIL"
             print(f"  {suite_name:30} {status:6} ({results.passed}/{total})")
         else:
             print(f"  {suite_name:30} ERROR")
