@@ -740,7 +740,7 @@ def assign_recipe_to_slot(
             return 0.0
 
     stable_id = _get_stable_recipe_id(recipe)
-    if stable_id in used_recipes or id(recipe) in used_recipes:
+    if stable_id in used_recipes:
         return None
 
     recipe_calories = safe_float(recipe.get("Calories", 0))

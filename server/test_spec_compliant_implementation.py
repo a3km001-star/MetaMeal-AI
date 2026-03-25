@@ -16,6 +16,7 @@ from services.nutrition_engine.spec_compliant_steps import (
     CARB_BASELINE_KCAL,
     MEAL_SLOT_CALORIE_DISTRIBUTION,
     AGE_MULTIPLY_FACTORS,
+    _get_stable_recipe_id,
     apply_carb_baseline,
     get_age_multiply_factor,
     scale_recipe_by_factor,
@@ -323,7 +324,7 @@ def test_step6_bucket_assignment():
         recipe_lunch,
         slot_targets,
         {"breakfast": recipe_breakfast, "lunch": None, "dinner": None, "snack": None},
-        {id(recipe_breakfast)}  # Track by object id
+        {_get_stable_recipe_id(recipe_breakfast)}
     )
     results.assert_equal(assigned, "lunch", "Recipe assigned to lunch when breakfast full")
 
@@ -332,7 +333,7 @@ def test_step6_bucket_assignment():
         recipe_lunch,
         slot_targets,
         {"breakfast": None, "lunch": None, "dinner": None, "snack": None},
-        {id(recipe_lunch)}  # Recipe already used (by object id)
+        {_get_stable_recipe_id(recipe_lunch)}
     )
     results.assert_equal(assigned, None, "Duplicate recipe prevented")
 
