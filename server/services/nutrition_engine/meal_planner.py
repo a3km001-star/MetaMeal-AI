@@ -19,7 +19,12 @@ This module implements a deterministic 14-step constraint workflow:
 """
 
 import logging
+import hashlib
+import json
 from typing import Any, Dict, List, Optional, Set, Tuple
+from datetime import datetime, timezone, date, timedelta
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import time
 
 from fastapi import HTTPException
 from pydantic import BaseModel, Field, field_validator
@@ -38,12 +43,13 @@ from services.nutrition_engine.metabolic_calculator import (
 )
 from services.nutrition_engine.spec_compliant_steps import (
     MEAL_SLOTS,
+    apply_diversity_aware_final_selection,
     apply_carb_baseline,
     get_age_multiply_factor,
     improve_assignment_with_single_slot_swaps,
     is_plan_valid,
+    optimize_bucket_assignment,
     redistribute_empty_slots,
-    select_meals_with_diversity,
     scale_recipe_by_factor,
     split_calories_by_meal_slot,
     split_macros_by_meal_slot,
@@ -62,6 +68,170 @@ MIN_CALORIES_BY_SEX: Dict[Sex, int] = {
     Sex.FEMALE: 1200,
 }
 MAX_REGENERATION_ATTEMPTS = 5
+HISTORY_DB_READ_TIMEOUT_SECONDS = 0.35
+HISTORY_DB_WRITE_TIMEOUT_SECONDS = 0.20
+HISTORY_DB_COOLDOWN_SECONDS = 300
+
+_history_db_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="meal-history-db")
+_history_db_disabled_until: Optional[datetime] = None
+
+
+def _history_db_is_disabled(now_utc: Optional[datetime] = None) -> bool:
+    """Return True while circuit breaker cooldown is active."""
+    if _history_db_disabled_until is None:
+        return False
+
+    now = now_utc or datetime.now(timezone.utc)
+    return now < _history_db_disabled_until
+
+
+def _disable_history_db_temporarily(reason: str) -> None:
+    """Open circuit breaker to prevent repeated blocking DB attempts."""
+    global _history_db_disabled_until
+    _history_db_disabled_until = datetime.now(timezone.utc) + timedelta(seconds=HISTORY_DB_COOLDOWN_SECONDS)
+    logger.warning("Meal history DB temporarily disabled for %ss: %s", HISTORY_DB_COOLDOWN_SECONDS, reason)
+
+
+def _run_history_db_call_with_timeout(callable_obj: Any, timeout_seconds: float) -> Any:
+    """Execute DB call with a strict timeout to protect API latency."""
+    future = _history_db_executor.submit(callable_obj)
+    try:
+        return future.result(timeout=timeout_seconds)
+    except TimeoutError:
+        future.cancel()
+        raise
+
+
+def _profile_history_key(user_profile: "UserProfile") -> str:
+    """Build a stable profile key for meal-history grouping."""
+    payload = {
+        "age": user_profile.age,
+        "weight": round(_coerce_float(user_profile.weight, 0.0), 2),
+        "height": round(_coerce_float(user_profile.height, 0.0), 2),
+        "sex": user_profile.sex.value,
+        "activity_level": user_profile.activity_level.value,
+        "goal": user_profile.goal.value,
+        "diet_type": (user_profile.diet_type or "").strip().lower(),
+        "allergies": sorted((user_profile.allergies or [])),
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:24]
+
+
+def _recipe_name_from_record(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+def _load_recent_meal_history(user_profile: "UserProfile", lookback_days: int = 3) -> Dict[str, List[str]]:
+    """Load recent meal names by slot from DB and merge caller-provided last_meals."""
+    merged_history: Dict[str, List[str]] = {slot: [] for slot in MEAL_SLOTS}
+    provided = user_profile.last_meals or {}
+
+    for slot in MEAL_SLOTS:
+        incoming = provided.get(slot, []) if isinstance(provided, dict) else []
+        if isinstance(incoming, list):
+            merged_history[slot] = [_recipe_name_from_record(item) for item in incoming if _recipe_name_from_record(item)]
+
+    if _history_db_is_disabled():
+        return merged_history
+
+    try:
+        from db.mongo import meal_plans_collection
+
+        today = datetime.now(timezone.utc).date()
+        profile_key = _profile_history_key(user_profile)
+
+        def _read_docs() -> List[Dict[str, Any]]:
+            return list(
+                meal_plans_collection.find({"profile_key": profile_key})
+                .sort("date", -1)
+                .limit(10)
+            )
+
+        docs = _run_history_db_call_with_timeout(_read_docs, HISTORY_DB_READ_TIMEOUT_SECONDS)
+
+        for doc in docs:
+            raw_date = str(doc.get("date") or "").strip()
+            if not raw_date:
+                continue
+            try:
+                plan_date = date.fromisoformat(raw_date)
+            except ValueError:
+                continue
+
+            day_delta = (today - plan_date).days
+            # Include same-day generated plans so repeated requests can diversify.
+            if day_delta < 0 or day_delta > lookback_days:
+                continue
+
+            meals = doc.get("meals", {})
+            if not isinstance(meals, dict):
+                continue
+
+            for slot in MEAL_SLOTS:
+                meal_name = _recipe_name_from_record(meals.get(slot))
+                if not meal_name:
+                    continue
+                if meal_name not in merged_history[slot]:
+                    merged_history[slot].append(meal_name)
+    except TimeoutError:
+        _disable_history_db_temporarily("history read timeout")
+    except Exception as exc:
+        _disable_history_db_temporarily(f"history read error: {exc}")
+
+    return merged_history
+
+
+def _extract_slot_meal_names_from_plan(plan: "CompleteMealPlan") -> Dict[str, str]:
+    """Extract slot -> recipe name from formatted plan or fallback meal labels."""
+    names: Dict[str, str] = {slot: "" for slot in MEAL_SLOTS}
+
+    if isinstance(plan.meal_plan, dict) and plan.meal_plan:
+        for slot in MEAL_SLOTS:
+            slot_entry = plan.meal_plan.get(slot)
+            if isinstance(slot_entry, dict):
+                names[slot] = str(slot_entry.get("name") or "").strip()
+
+    for meal in plan.meals:
+        meal_name = str(meal.name or "")
+        if " - " not in meal_name:
+            continue
+        slot, recipe_name = meal_name.split(" - ", 1)
+        slot = slot.strip().lower()
+        if slot in names and not names[slot]:
+            names[slot] = recipe_name.strip()
+
+    return {slot: value for slot, value in names.items() if value}
+
+
+def _persist_generated_meal_history(user_profile: "UserProfile", plan: "CompleteMealPlan") -> None:
+    """Persist generated meal names so future days can penalize repeats."""
+    if _history_db_is_disabled():
+        return
+
+    try:
+        from db.mongo import meal_plans_collection
+
+        today_str = datetime.now(timezone.utc).date().isoformat()
+        meals = _extract_slot_meal_names_from_plan(plan)
+        if len(meals) != len(MEAL_SLOTS):
+            return
+
+        payload = {
+            "date": today_str,
+            "meals": meals,
+            "profile_key": _profile_history_key(user_profile),
+            "created_at": datetime.now(timezone.utc),
+        }
+
+        def _write_doc() -> Any:
+            return meal_plans_collection.insert_one(payload)
+
+        _run_history_db_call_with_timeout(_write_doc, HISTORY_DB_WRITE_TIMEOUT_SECONDS)
+    except TimeoutError:
+        _disable_history_db_temporarily("history write timeout")
+    except Exception as exc:
+        _disable_history_db_temporarily(f"history write error: {exc}")
 
 
 def _coerce_float(value: Any, default: float = 0.0) -> float:
@@ -336,6 +506,12 @@ def _generate_validated_meal_plan_spec_compliant(
             )
 
     supplements_dataset = load_supplements()
+    recent_meal_history = _load_recent_meal_history(user_profile)
+    history_seed = (
+        f"{_profile_history_key(user_profile)}"
+        f"|{datetime.now(timezone.utc).date().isoformat()}"
+        f"|req:{time.time_ns()}"
+    )
     best_candidate_plan: Optional[CompleteMealPlan] = None
     last_error = "Validation failed"
     best_candidate_score = float("inf")
@@ -367,20 +543,14 @@ def _generate_validated_meal_plan_spec_compliant(
             })
             logger.info(f"Slot targets: {slot_calorie_targets}")
 
-            # STEP 7 + STEP 8: Diversity-aware matching and bucket assignment.
-            logger.info("STEP 7/8: Running diversity-aware slot assignment")
-            assigned_slots, used_recipes, selection_meta = select_meals_with_diversity(
+            # STEP 7 + STEP 8: Bucket assignment (kept deterministic and nutrition-first).
+            logger.info("STEP 7/8: Running nutrition-first bucket assignment")
+            assigned_slots, used_recipes, bucket_error = optimize_bucket_assignment(
                 scaled_foods,
                 slot_macro_targets,
-                meal_history=user_profile.last_meals or {},
+                tolerance_multiplier=1.0,
             )
-            logger.info(f"Selection meta: {selection_meta}")
-
-            fallback_level = int(selection_meta.get("fallback_level", 0) or 0)
-            if fallback_level > 0:
-                global_warnings.append(
-                    f"Meal selection fallback level {fallback_level} was used to guarantee output."
-                )
+            logger.info(f"Bucket assignment error: {bucket_error}")
 
             # STEP 9: Initial validity check.
             logger.info("STEP 9: Checking initial slot validity")
@@ -416,6 +586,31 @@ def _generate_validated_meal_plan_spec_compliant(
             if improved and is_plan_valid(optimized_slots):
                 assigned_slots = optimized_slots
                 logger.info("STEP 11B: Slot-swap optimization improved assignment")
+
+            # Diversity layer: applied only after bucket generation/redistribution.
+            logger.info("STEP 11C: Applying diversity-aware final selection")
+            diversified_slots, diversity_meta = apply_diversity_aware_final_selection(
+                assigned_slots=assigned_slots,
+                recipes=scaled_foods,
+                slot_targets=slot_macro_targets,
+                meal_history=recent_meal_history,
+                selection_seed=f"{history_seed}|attempt:{attempt}",
+            )
+            if is_plan_valid(diversified_slots):
+                assigned_slots = diversified_slots
+                repeat_count = int(diversity_meta.get("repeat_count", 0) or 0)
+                new_meal_count = int(diversity_meta.get("new_meal_count", 0) or 0)
+                logger.info(f"Diversity meta: repeats={repeat_count}, new={new_meal_count}")
+                fallback_slots = diversity_meta.get("all_repeated_fallback_slots", [])
+                if isinstance(fallback_slots, list) and fallback_slots:
+                    global_warnings.append(
+                        "Diversity relaxed for slots with only repeated candidates: "
+                        + ", ".join(str(slot) for slot in fallback_slots)
+                    )
+            else:
+                global_warnings.append(
+                    "Diversity layer skipped because it could not preserve a fully valid slot assignment."
+                )
 
             # Build structured plan
             structured_plan = {
@@ -684,7 +879,9 @@ def create_meal_plan(user_profile: UserProfile) -> CompleteMealPlan:
 
 def create_meal_plan_response(user_profile: UserProfile) -> Dict[str, Any]:
     """Return the exact compact frontend payload for a meal plan request."""
-    return create_meal_plan(user_profile).to_frontend_response()
+    plan = create_meal_plan(user_profile)
+    _persist_generated_meal_history(user_profile, plan)
+    return plan.to_frontend_response()
 
 
 def validate_user_profile(raw_profile: Dict[str, Any]) -> UserProfile:
