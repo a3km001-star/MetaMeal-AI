@@ -49,6 +49,22 @@ BREAKFAST_CALORIE_TOLERANCE = 0.10  # ±10%
 OTHER_MEAL_CALORIE_TOLERANCE = 0.12  # ±12%
 PROTEIN_TOLERANCE = 0.20  # ±20%
 
+CALORIE_ERROR_WEIGHT = 0.60
+PROTEIN_ERROR_WEIGHT = 0.25
+CARB_ERROR_WEIGHT = 0.10
+FAT_ERROR_WEIGHT = 0.05
+MAX_CANDIDATES_PER_SLOT = 20
+MAX_SWAP_OPTIMIZATION_ITERATIONS = 3
+
+
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
 
 # ============================================================================
 # STEP 2: CARB BASELINE ADJUSTMENT
@@ -249,6 +265,36 @@ def calculate_macro_error(
     return abs(target_value - recipe_value) / target_value
 
 
+def calculate_weighted_slot_error(
+    recipe: Dict[str, Any],
+    slot_target: Dict[str, float],
+) -> float:
+    """Compute weighted fit error between a recipe and one meal slot target."""
+    calorie_error = calculate_macro_error(
+        _safe_float(recipe.get("Calories", 0)),
+        _safe_float(slot_target.get("calories", 0)),
+    )
+    protein_error = calculate_macro_error(
+        _safe_float(recipe.get("Protein", 0)),
+        _safe_float(slot_target.get("protein", 0)),
+    )
+    carb_error = calculate_macro_error(
+        _safe_float(recipe.get("Carbohydrates", recipe.get("Carbs", 0))),
+        _safe_float(slot_target.get("carbohydrates", 0)),
+    )
+    fat_error = calculate_macro_error(
+        _safe_float(recipe.get("Fat", 0)),
+        _safe_float(slot_target.get("fat", 0)),
+    )
+
+    return (
+        (calorie_error * CALORIE_ERROR_WEIGHT)
+        + (protein_error * PROTEIN_ERROR_WEIGHT)
+        + (carb_error * CARB_ERROR_WEIGHT)
+        + (fat_error * FAT_ERROR_WEIGHT)
+    )
+
+
 def check_calorie_threshold(
     recipe_calories: float,
     slot_calories: float,
@@ -300,6 +346,44 @@ def check_protein_threshold(
     upper_bound = slot_protein * (1 + PROTEIN_TOLERANCE)
 
     return lower_bound <= recipe_protein <= upper_bound
+
+
+def _check_slot_thresholds(
+    recipe: Dict[str, Any],
+    slot_target: Dict[str, float],
+    slot_name: str,
+    tolerance_multiplier: float = 1.0,
+) -> bool:
+    """Check slot thresholds with optional deterministic tolerance expansion."""
+    recipe_calories = _safe_float(recipe.get("Calories", 0))
+    recipe_protein = _safe_float(recipe.get("Protein", 0))
+    target_calories = _safe_float(slot_target.get("calories", 0))
+    target_protein = _safe_float(slot_target.get("protein", 0))
+
+    if target_calories <= 0:
+        return False
+
+    calorie_tolerance = (
+        BREAKFAST_CALORIE_TOLERANCE if slot_name == "breakfast" else OTHER_MEAL_CALORIE_TOLERANCE
+    ) * max(tolerance_multiplier, 1.0)
+    protein_tolerance = PROTEIN_TOLERANCE * max(tolerance_multiplier, 1.0)
+
+    calorie_ok = (
+        target_calories * (1 - calorie_tolerance)
+        <= recipe_calories
+        <= target_calories * (1 + calorie_tolerance)
+    )
+
+    if target_protein <= 0:
+        protein_ok = recipe_protein <= 5
+    else:
+        protein_ok = (
+            target_protein * (1 - protein_tolerance)
+            <= recipe_protein
+            <= target_protein * (1 + protein_tolerance)
+        )
+
+    return calorie_ok and protein_ok
 
 
 def assign_recipe_to_slot(
@@ -379,6 +463,75 @@ def assign_recipe_to_slot(
             best_slot = slot_name
 
     return best_slot
+
+
+def optimize_bucket_assignment(
+    recipes: List[Dict[str, Any]],
+    slot_targets: Dict[str, Dict[str, float]],
+    tolerance_multiplier: float = 1.0,
+) -> Tuple[Dict[str, Optional[Dict[str, Any]]], Set[int], float]:
+    """Globally optimize one recipe per slot using deterministic weighted error.
+
+    Returns:
+        (assigned_slots, used_recipe_ids, total_error)
+    """
+    assigned_slots: Dict[str, Optional[Dict[str, Any]]] = {slot: None for slot in MEAL_SLOTS}
+    if not recipes:
+        return assigned_slots, set(), float("inf")
+
+    slot_candidates: Dict[str, List[Tuple[float, Dict[str, Any]]]] = {slot: [] for slot in MEAL_SLOTS}
+
+    for recipe in recipes:
+        for slot in MEAL_SLOTS:
+            slot_target = slot_targets.get(slot, {})
+            if not _check_slot_thresholds(recipe, slot_target, slot, tolerance_multiplier=tolerance_multiplier):
+                continue
+            error = calculate_weighted_slot_error(recipe, slot_target)
+            slot_candidates[slot].append((error, recipe))
+
+    for slot in MEAL_SLOTS:
+        slot_candidates[slot].sort(key=lambda item: (item[0], item[1].get("RecipeName", "")))
+        if len(slot_candidates[slot]) > MAX_CANDIDATES_PER_SLOT:
+            slot_candidates[slot] = slot_candidates[slot][:MAX_CANDIDATES_PER_SLOT]
+
+    ordered_slots = sorted(MEAL_SLOTS, key=lambda slot: len(slot_candidates[slot]))
+    if any(len(slot_candidates[slot]) == 0 for slot in ordered_slots):
+        return assigned_slots, set(), float("inf")
+
+    best_total_error = float("inf")
+    best_assignment: Dict[str, Optional[Dict[str, Any]]] = {slot: None for slot in MEAL_SLOTS}
+
+    def dfs(slot_idx: int, running_error: float, used_ids: Set[int], current_assignment: Dict[str, Optional[Dict[str, Any]]]) -> None:
+        nonlocal best_total_error, best_assignment
+
+        if running_error >= best_total_error:
+            return
+
+        if slot_idx >= len(ordered_slots):
+            best_total_error = running_error
+            best_assignment = dict(current_assignment)
+            return
+
+        slot_name = ordered_slots[slot_idx]
+        for error, recipe in slot_candidates[slot_name]:
+            recipe_id = id(recipe)
+            if recipe_id in used_ids:
+                continue
+
+            current_assignment[slot_name] = recipe
+            used_ids.add(recipe_id)
+            dfs(slot_idx + 1, running_error + error, used_ids, current_assignment)
+            used_ids.remove(recipe_id)
+            current_assignment[slot_name] = None
+
+    dfs(0, 0.0, set(), {slot: None for slot in MEAL_SLOTS})
+
+    used_recipe_ids = {
+        id(recipe)
+        for recipe in best_assignment.values()
+        if recipe is not None
+    }
+    return best_assignment, used_recipe_ids, best_total_error
 
 
 # ============================================================================
@@ -485,6 +638,136 @@ def get_redistribution_target(
         return "snack"  # Snack has 10% requirement, easiest to reallocate
     # In other cases, recommend keeping current assignment
     return None
+
+
+def redistribute_empty_slots(
+    assigned_slots: Dict[str, Optional[Dict[str, Any]]],
+    all_recipes: List[Dict[str, Any]],
+    slot_targets: Dict[str, Dict[str, float]],
+    used_recipe_ids: Set[int],
+) -> Dict[str, Optional[Dict[str, Any]]]:
+    """Fill empty slots with deterministic redistribution and relaxed matching."""
+    rebalanced = dict(assigned_slots)
+    remaining_recipes = [r for r in all_recipes if id(r) not in used_recipe_ids]
+
+    # Progressive relaxation keeps behavior deterministic and bounded.
+    tolerance_levels = (1.0, 1.25, 1.5, 1.75, 2.0)
+
+    for slot in MEAL_SLOTS:
+        if rebalanced.get(slot) is not None:
+            continue
+
+        slot_target = slot_targets.get(slot, {})
+        best_recipe = None
+        best_error = float("inf")
+
+        for multiplier in tolerance_levels:
+            for recipe in remaining_recipes:
+                if not _check_slot_thresholds(recipe, slot_target, slot, tolerance_multiplier=multiplier):
+                    continue
+                err = calculate_weighted_slot_error(recipe, slot_target)
+                if err < best_error:
+                    best_error = err
+                    best_recipe = recipe
+
+            if best_recipe is not None:
+                break
+
+        if best_recipe is not None:
+            rebalanced[slot] = best_recipe
+            rid = id(best_recipe)
+            used_recipe_ids.add(rid)
+            remaining_recipes = [r for r in remaining_recipes if id(r) != rid]
+
+    return rebalanced
+
+
+def improve_assignment_with_single_slot_swaps(
+    assigned_slots: Dict[str, Optional[Dict[str, Any]]],
+    all_recipes: List[Dict[str, Any]],
+    slot_targets: Dict[str, Dict[str, float]],
+    tolerance_multiplier: float = 1.25,
+    max_iterations: int = MAX_SWAP_OPTIMIZATION_ITERATIONS,
+) -> Tuple[Dict[str, Optional[Dict[str, Any]]], bool]:
+    """Improve a full assignment by deterministic single-slot swap local search.
+
+    Optimization target (lexicographic):
+      1) absolute daily calorie gap to slot target sum
+      2) summed weighted slot error
+
+    Returns:
+      (improved_assignment, changed)
+    """
+    working = dict(assigned_slots)
+    if not is_plan_valid(working):
+        return working, False
+
+    target_daily_calories = sum(_safe_float(slot_targets.get(slot, {}).get("calories", 0)) for slot in MEAL_SLOTS)
+
+    def score_plan(plan: Dict[str, Optional[Dict[str, Any]]]) -> Tuple[float, float]:
+        total_calories = 0.0
+        total_error = 0.0
+        for slot in MEAL_SLOTS:
+            recipe = plan.get(slot)
+            if recipe is None:
+                continue
+            total_calories += _safe_float(recipe.get("Calories", 0))
+            total_error += calculate_weighted_slot_error(recipe, slot_targets.get(slot, {}))
+
+        calorie_gap = abs(total_calories - target_daily_calories)
+        return (round(calorie_gap, 6), round(total_error, 6))
+
+    changed = False
+    current_score = score_plan(working)
+
+    for _ in range(max(0, max_iterations)):
+        used_ids = {id(recipe) for recipe in working.values() if recipe is not None}
+        best_move = None
+        best_move_score = current_score
+
+        for slot in MEAL_SLOTS:
+            current_recipe = working.get(slot)
+            if current_recipe is None:
+                continue
+
+            current_recipe_id = id(current_recipe)
+            slot_target = slot_targets.get(slot, {})
+
+            slot_candidates: List[Tuple[float, Dict[str, Any]]] = []
+            for recipe in all_recipes:
+                rid = id(recipe)
+                if rid in used_ids and rid != current_recipe_id:
+                    continue
+                if not _check_slot_thresholds(recipe, slot_target, slot, tolerance_multiplier=tolerance_multiplier):
+                    continue
+                slot_candidates.append((calculate_weighted_slot_error(recipe, slot_target), recipe))
+
+            slot_candidates.sort(key=lambda item: (item[0], item[1].get("RecipeName", "")))
+            if len(slot_candidates) > MAX_CANDIDATES_PER_SLOT:
+                slot_candidates = slot_candidates[:MAX_CANDIDATES_PER_SLOT]
+
+            for _, candidate in slot_candidates:
+                if candidate is current_recipe:
+                    continue
+
+                tentative = dict(working)
+                tentative[slot] = candidate
+                tentative_score = score_plan(tentative)
+                tie_breaker = (slot, str(candidate.get("RecipeName", "")))
+
+                if (tentative_score, tie_breaker) < (best_move_score, ("~", "~")):
+                    best_move_score = tentative_score
+                    best_move = (slot, candidate)
+
+        if best_move is None or best_move_score >= current_score:
+            break
+
+        slot_name, candidate_recipe = best_move
+        working[slot_name] = candidate_recipe
+        current_score = best_move_score
+        changed = True
+
+    return working, changed
 
 
 # ============================================================================

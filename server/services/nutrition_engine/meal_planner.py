@@ -1,20 +1,21 @@
 """Main service layer for the nutrition-engine meal planner (SPEC-COMPLIANT).
 
-This module implements the specification-compliant 11-step meal planning algorithm:
+This module implements a deterministic 14-step constraint workflow:
 
-1. Metabolic Base: Calculate BMR, TDEE, calorie target
-2. Carb Baseline: Subtract 390 kcal from total
-3. Filtering: Apply diet type and allergy filters
-4. Age-Based Scaling: Apply multiply_factor (1.6-2.5)
-5. Meal Split: Distribute calories by slot (25%/35%/30%/10%)
-6. Bucket Assignment: Assign recipes to meal slots by error
-7. Validity Check: Ensure all 4 slots filled
-8. Redistribution: Move items between buckets if needed
-9. Supplement Solver: Fill macro gaps
-10. Final Validation: Ensure targets met
-11. Output: Return formatted JSON
-
-The planner is deterministic, algorithmic, and guarantees output.
+1. Metabolic Base
+2. Carb Baseline Subtraction
+3. Diet Filtering
+4. Allergy Filtering
+5. Age-Based Scaling
+6. Meal Split (25/35/30/10)
+7. Error-Based Matching
+8. Bucket Assignment
+9. Validity Check
+10. Fallback (multiply_factor=2.5)
+11. Redistribution
+12. Supplement Solver
+13. Final Validation
+14. Output Formatting
 """
 
 import logging
@@ -38,11 +39,12 @@ from services.nutrition_engine.metabolic_calculator import (
 from services.nutrition_engine.spec_compliant_steps import (
     MEAL_SLOTS,
     apply_carb_baseline,
-    assign_recipe_to_slot,
     get_age_multiply_factor,
+    improve_assignment_with_single_slot_swaps,
     is_plan_valid,
+    optimize_bucket_assignment,
+    redistribute_empty_slots,
     scale_recipe_by_factor,
-    sort_recipes_for_assignment,
     split_calories_by_meal_slot,
     split_macros_by_meal_slot,
 )
@@ -93,7 +95,7 @@ def _is_reasonable_nutrition_row(normalized: Dict[str, Any]) -> bool:
     return True
 
 
-def _normalize_food_for_multiply_factor(food: Dict[str, Any]) -> Dict[str, Any]:
+def _normalize_food_for_multiply_factor(food: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Normalize dataset row into spec-compliant format."""
     calories = _coerce_float(food.get("Calories", food.get("Calories (kcal)", 0)))
     protein = _coerce_float(food.get("Protein", food.get("Protein(g)", 0)))
@@ -220,6 +222,9 @@ class CompleteMealPlan(BaseModel):
     calorie_accuracy: float
     goal: str
     activity_level: str
+    solver_mode: str = "strict"
+    fallback_reason: Optional[str] = None
+    attempt_count: int = 1
     warnings: List[str] = Field(default_factory=list)
 
     def to_frontend_response(self) -> Dict[str, Any]:
@@ -240,6 +245,11 @@ class CompleteMealPlan(BaseModel):
                 }
                 for s in self.supplements
             ],
+            "solver": {
+                "mode": self.solver_mode,
+                "attempt_count": self.attempt_count,
+                "fallback_reason": self.fallback_reason,
+            },
         }
         if self.warnings:
             response["warnings"] = self.warnings
@@ -269,7 +279,7 @@ def _generate_validated_meal_plan_spec_compliant(
     user_profile: UserProfile,
     foods: List[Dict[str, Any]],
 ) -> CompleteMealPlan:
-    """Generate meal plan using spec-compliant 11-step algorithm."""
+    """Generate meal plan using deterministic 14-step constraint pipeline."""
     from services.nutrition_engine.meal_formatter import format_meal_plan
     from services.nutrition_engine.meal_validator import validate_meal_plan as validate_generated_plan
     from services.nutrition_engine.supplement_solver import fill_macro_gap, load_supplements
@@ -297,31 +307,46 @@ def _generate_validated_meal_plan_spec_compliant(
     )
     logger.info(f"Macros: P={macros.protein_grams}g, C={macros.carb_grams}g, F={macros.fat_grams}g")
 
-    # STEP 3: Filtering
-    logger.info("STEP 3: Filtering by diet and allergies")
+    # STEP 3 + STEP 4: Diet and allergy filtering
+    logger.info("STEP 3/4: Filtering by diet and allergies")
     prepared_foods = _prepare_foods_for_profile_spec_compliant(foods, user_profile)
-    filtered_foods = filter_by_diet(prepared_foods, user_profile.diet_type)
-    filtered_foods = filter_by_allergies(filtered_foods, user_profile.allergies or [])
+    global_warnings: List[str] = []
+
+    diet_filtered_foods = filter_by_diet(prepared_foods, user_profile.diet_type)
+    filtered_foods = filter_by_allergies(diet_filtered_foods, user_profile.allergies or [])
     logger.info(f"After filtering: {len(filtered_foods)} foods available")
 
     if not filtered_foods:
-        raise HTTPException(
-            status_code=400,
-            detail="No foods available after applying diet and allergy filters",
-        )
+        # Deterministic over-filter fallback chain: keep output generation alive.
+        if diet_filtered_foods:
+            filtered_foods = list(diet_filtered_foods)
+            global_warnings.append(
+                "Allergy filtering removed all recipes; proceeding with diet-only foods."
+            )
+        elif prepared_foods:
+            filtered_foods = list(prepared_foods)
+            global_warnings.append(
+                "Diet and allergy filtering removed all recipes; using minimally filtered foods."
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="No foods available after dataset normalization",
+            )
 
     supplements_dataset = load_supplements()
     best_candidate_plan: Optional[CompleteMealPlan] = None
     last_error = "Validation failed"
+    best_candidate_score = float("inf")
 
     # Retry loop with fallback strategies
     for attempt in range(1, MAX_REGENERATION_ATTEMPTS + 1):
         try:
             logger.info(f"ATTEMPT {attempt}/{MAX_REGENERATION_ATTEMPTS}")
 
-            # STEP 4: Age-Based Scaling (already done in food prep, but adjust for fallback)
+            # STEP 5 + STEP 10: Age-based scaling with fallback multiplier on late attempts.
             if attempt >= 4:
-                logger.info("FALLBACK: Using increased multiply_factor")
+                logger.info("STEP 10: Using fallback multiply_factor=2.5")
                 multiply_factor = 2.5
                 age_factor = get_age_multiply_factor(user_profile.age)
                 if not age_factor or age_factor <= 0:
@@ -331,8 +356,8 @@ def _generate_validated_meal_plan_spec_compliant(
             else:
                 scaled_foods = list(filtered_foods)
 
-            # STEP 5: Meal Split
-            logger.info("STEP 5: Calculating meal slot targets")
+            # STEP 6: Meal split
+            logger.info("STEP 6: Calculating meal slot targets")
             slot_calorie_targets = split_calories_by_meal_slot(adjusted_calories)
             slot_macro_targets = split_macros_by_meal_slot(slot_calorie_targets, {
                 "protein": macros.protein_grams,
@@ -341,33 +366,49 @@ def _generate_validated_meal_plan_spec_compliant(
             })
             logger.info(f"Slot targets: {slot_calorie_targets}")
 
-            # STEP 6: Bucket Assignment
-            logger.info("STEP 6: Assigning recipes to meal slots")
-            sorted_foods = sort_recipes_for_assignment(scaled_foods, slot_macro_targets)
-            assigned_slots: Dict[str, Optional[Dict[str, Any]]] = {slot: None for slot in MEAL_SLOTS}
-            used_recipes: Set[int] = set()  # Track by object id instead of name
+            # STEP 7 + STEP 8: Error-based matching and bucket assignment.
+            logger.info("STEP 7/8: Running global error-based slot assignment")
+            assigned_slots, used_recipes, assignment_error = optimize_bucket_assignment(
+                scaled_foods,
+                slot_macro_targets,
+                tolerance_multiplier=1.0,
+            )
+            logger.info(f"Assignment total error: {assignment_error}")
 
-            for recipe in sorted_foods:
-                assigned_slot = assign_recipe_to_slot(
-                    recipe,
-                    slot_macro_targets,
-                    assigned_slots,
-                    used_recipes,
-                )
-                if assigned_slot:
-                    assigned_slots[assigned_slot] = recipe
-                    used_recipes.add(id(recipe))  # Use object id for unique identification
-                    logger.info(f"  Assigned to {assigned_slot}: {recipe.get('RecipeName')}")
+            # STEP 9: Initial validity check.
+            logger.info("STEP 9: Checking initial slot validity")
+            initial_valid = is_plan_valid(assigned_slots)
 
-            # STEP 7: Validity Check
-            logger.info("STEP 7: Checking plan validity")
-            if not is_plan_valid(assigned_slots):
-                last_error = f"Not all meal slots filled on attempt {attempt}"
-                logger.warning(last_error)
-                continue
+            # STEP 11: Redistribution for empty slots.
+            logger.info("STEP 11: Running redistribution for empty slots")
+            redistributed_slots = redistribute_empty_slots(
+                assigned_slots,
+                scaled_foods,
+                slot_macro_targets,
+                used_recipes,
+            )
 
-            # STEP 8: Redistribution (if needed - skip in this version since 1 recipe per slot)
-            logger.info("STEP 8: Redistribution check (not needed in 1-recipe-per-slot mode)")
+            if not is_plan_valid(redistributed_slots):
+                if initial_valid:
+                    redistributed_slots = assigned_slots
+                else:
+                    last_error = f"Not all meal slots filled after redistribution on attempt {attempt}"
+                    logger.warning(last_error)
+                    continue
+
+            assigned_slots = redistributed_slots
+
+            # STEP 11B: Single-slot swap local search to improve fallback quality.
+            swap_tolerance = 1.35 if attempt >= 4 else 1.15
+            optimized_slots, improved = improve_assignment_with_single_slot_swaps(
+                assigned_slots,
+                scaled_foods,
+                slot_macro_targets,
+                tolerance_multiplier=swap_tolerance,
+            )
+            if improved and is_plan_valid(optimized_slots):
+                assigned_slots = optimized_slots
+                logger.info("STEP 11B: Slot-swap optimization improved assignment")
 
             # Build structured plan
             structured_plan = {
@@ -385,8 +426,8 @@ def _generate_validated_meal_plan_spec_compliant(
                 if recipe is not None
             }
 
-            # STEP 9: Supplement Solver
-            logger.info("STEP 9: Filling macro gaps with supplements")
+            # STEP 12: Supplement solver after redistribution.
+            logger.info("STEP 12: Filling macro gaps with supplements")
             target_macros = {
                 "protein": macros.protein_grams,
                 "carbohydrates": macros.carb_grams,
@@ -412,11 +453,23 @@ def _generate_validated_meal_plan_spec_compliant(
                 macros=macros,
                 structured_plan=structured_plan,
                 supplements=supplement_result["supplements"],
-                warnings=supplement_result["warnings"],
+                solver_mode="fallback" if attempt >= 4 or global_warnings else "strict",
+                fallback_reason=(
+                    "Applied deterministic fallback path due to strict constraint infeasibility"
+                    if attempt >= 4 or global_warnings
+                    else None
+                ),
+                attempt_count=attempt,
+                warnings=[*global_warnings, *supplement_result["warnings"]],
             )
 
-            # STEP 10: Final Validation
-            logger.info("STEP 10: Final validation")
+            score = abs(candidate_plan.total_calories - calorie_target)
+            if score < best_candidate_score:
+                best_candidate_score = score
+                best_candidate_plan = candidate_plan
+
+            # STEP 13: Final validation.
+            logger.info("STEP 13: Final validation")
             is_valid = validate_generated_plan(
                 candidate_plan,
                 calorie_target,
@@ -428,11 +481,10 @@ def _generate_validated_meal_plan_spec_compliant(
 
             if not is_valid:
                 last_error = f"Validation failed on attempt {attempt}"
-                best_candidate_plan = candidate_plan  # Keep as fallback
                 continue
 
-            # STEP 11: Output
-            logger.info("STEP 11: Formatting output")
+            # STEP 14: Output formatting.
+            logger.info("STEP 14: Formatting output")
             formatted_plan = format_meal_plan(structured_plan)
             final_plan = candidate_plan.model_copy(update={"meal_plan": formatted_plan})
             logger.info("✓ MEAL PLAN GENERATED SUCCESSFULLY")
@@ -446,12 +498,28 @@ def _generate_validated_meal_plan_spec_compliant(
     # Fallback: return best candidate if available
     if best_candidate_plan:
         logger.info("Returning best candidate from attempts with warnings")
-        # Use the meal_plan already in best_candidate_plan or reconstruct from it
+        from services.nutrition_engine.meal_formatter import format_meal_plan
+
+        # Use existing formatted plan if available; otherwise rebuild from meal items.
         formatted_plan = best_candidate_plan.meal_plan or {}
+        if not formatted_plan:
+            reconstructed = _reconstruct_structured_plan_from_complete_plan(best_candidate_plan)
+            if len(reconstructed) == len(MEAL_SLOTS):
+                try:
+                    formatted_plan = format_meal_plan(reconstructed)
+                except Exception:
+                    formatted_plan = reconstructed
+
         warnings = list(best_candidate_plan.warnings or [])
         warnings.append("Returned best available plan after all retry attempts.")
         return best_candidate_plan.model_copy(
-            update={"meal_plan": formatted_plan, "warnings": warnings}
+            update={
+                "meal_plan": formatted_plan,
+                "warnings": warnings,
+                "solver_mode": "fallback",
+                "fallback_reason": "No fully valid plan found within retry budget; returning best deterministic candidate",
+                "attempt_count": MAX_REGENERATION_ATTEMPTS,
+            }
         )
 
     raise HTTPException(
@@ -468,6 +536,9 @@ def _build_complete_meal_plan(
     macros: MacroSplit,
     structured_plan: Dict[str, Dict[str, Any]],
     supplements: Optional[List[Dict[str, Any]]] = None,
+    solver_mode: str = "strict",
+    fallback_reason: Optional[str] = None,
+    attempt_count: int = 1,
     warnings: Optional[List[str]] = None,
 ) -> CompleteMealPlan:
     """Build complete meal plan object."""
@@ -550,8 +621,40 @@ def _build_complete_meal_plan(
         calorie_accuracy=calorie_accuracy,
         goal=user_profile.goal.value,
         activity_level=user_profile.activity_level.value,
+        solver_mode=solver_mode,
+        fallback_reason=fallback_reason,
+        attempt_count=attempt_count,
         warnings=warnings or [],
     )
+
+
+def _reconstruct_structured_plan_from_complete_plan(plan: CompleteMealPlan) -> Dict[str, Dict[str, Any]]:
+    """Rebuild structured slot data from CompleteMealPlan meal entries."""
+    structured: Dict[str, Dict[str, Any]] = {}
+
+    for meal in plan.meals:
+        meal_name = str(meal.name or "")
+        slot = ""
+
+        if " - " in meal_name:
+            slot = meal_name.split(" - ", 1)[0].strip().lower()
+
+        if slot not in MEAL_SLOTS:
+            continue
+
+        display_name = meal_name.split(" - ", 1)[1].strip() if " - " in meal_name else meal_name.strip()
+        structured[slot] = {
+            "name": display_name or meal_name,
+            "calories": _coerce_float(meal.calories, 0),
+            "protein": _coerce_float(meal.protein, 0),
+            "carbs": _coerce_float(meal.carbohydrates, 0),
+            "fat": _coerce_float(meal.fat, 0),
+            "ingredients": meal.ingredients or "",
+            "instructions": meal.instructions or "",
+            "diet_type": meal.diet_type or "Unknown",
+        }
+
+    return structured
 
 
 # ============================================================================
@@ -574,3 +677,57 @@ def create_meal_plan(user_profile: UserProfile) -> CompleteMealPlan:
 def create_meal_plan_response(user_profile: UserProfile) -> Dict[str, Any]:
     """Return the exact compact frontend payload for a meal plan request."""
     return create_meal_plan(user_profile).to_frontend_response()
+
+
+def validate_user_profile(raw_profile: Dict[str, Any]) -> UserProfile:
+    """Validate and normalize raw profile payload into UserProfile."""
+    return UserProfile(**raw_profile)
+
+
+def get_meal_plan_summary(plan: CompleteMealPlan) -> Dict[str, Any]:
+    """Return a compact summary useful for testing/debugging."""
+    return {
+        "meal_count": plan.meal_count,
+        "total_calories": plan.total_calories,
+        "target_calories": plan.calorie_target,
+        "accuracy": f"{plan.calorie_accuracy:.1f}%",
+        "solver_mode": plan.solver_mode,
+        "attempt_count": plan.attempt_count,
+        "warnings": list(plan.warnings or []),
+    }
+
+
+def get_daily_meal_distribution(total_calories: float, _meal_count: int = 4) -> Dict[str, float]:
+    """Return fixed 4-slot calorie distribution for the planner."""
+    return split_calories_by_meal_slot(total_calories)
+
+
+def compare_plan_to_targets(plan: CompleteMealPlan) -> Dict[str, Dict[str, float]]:
+    """Compare achieved totals against calorie and macro targets."""
+    def pct(actual: float, target: float) -> float:
+        if target <= 0:
+            return 0.0
+        return round((actual / target) * 100.0, 2)
+
+    return {
+        "calories": {
+            "actual": plan.total_calories,
+            "target": plan.calorie_target,
+            "percentage": pct(plan.total_calories, plan.calorie_target),
+        },
+        "protein": {
+            "actual": plan.total_protein,
+            "target": _coerce_float(plan.macros.get("protein", 0)),
+            "percentage": pct(plan.total_protein, _coerce_float(plan.macros.get("protein", 0))),
+        },
+        "carbohydrates": {
+            "actual": plan.total_carbs,
+            "target": _coerce_float(plan.macros.get("carbohydrates", 0)),
+            "percentage": pct(plan.total_carbs, _coerce_float(plan.macros.get("carbohydrates", 0))),
+        },
+        "fat": {
+            "actual": plan.total_fat,
+            "target": _coerce_float(plan.macros.get("fat", 0)),
+            "percentage": pct(plan.total_fat, _coerce_float(plan.macros.get("fat", 0))),
+        },
+    }
