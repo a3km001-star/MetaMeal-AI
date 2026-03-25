@@ -251,7 +251,7 @@ def _calculate_macros_with_weight(
         protein_percentage=round(protein_percentage, 1),
         carb_percentage=round(carb_percentage, 1),
         fat_percentage=round(fat_percentage, 1),
-        goal=goal.value
+        goal=goal if isinstance(goal, str) else goal.value
     )
 
 

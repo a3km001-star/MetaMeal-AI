@@ -1,6 +1,6 @@
 """Pydantic request models for meal planner endpoints."""
 
-from typing import List
+from typing import Dict, List
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -19,6 +19,7 @@ class MealRequest(BaseModel):
 	)
 	goal: str = Field(..., description="Fitness goal (fat_loss/muscle_gain/maintenance)")
 	allergies: List[str] = Field(default_factory=list, description="List of allergens to avoid")
+	last_meals: Dict[str, List[str]] = Field(default_factory=dict, description="Recent meals by slot")
 
 	@field_validator("sex", mode="before")
 	@classmethod
@@ -83,3 +84,21 @@ class MealRequest(BaseModel):
 			if cleaned:
 				normalized_allergies.append(cleaned)
 		return normalized_allergies
+
+	@field_validator("last_meals", mode="before")
+	@classmethod
+	def validate_last_meals(cls, value: Dict[str, List[str]]) -> Dict[str, List[str]]:
+		if value is None:
+			return {}
+		if not isinstance(value, dict):
+			raise ValueError("last_meals must be a dictionary of meal_type -> list[str]")
+
+		normalized: Dict[str, List[str]] = {}
+		for key, items in value.items():
+			meal_type = str(key).strip().lower()
+			if meal_type not in {"breakfast", "lunch", "dinner", "snack"}:
+				continue
+			if not isinstance(items, list):
+				raise ValueError("last_meals values must be lists of strings")
+			normalized[meal_type] = [str(item).strip().lower() for item in items if str(item).strip()]
+		return normalized
