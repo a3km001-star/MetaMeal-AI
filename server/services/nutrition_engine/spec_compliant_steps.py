@@ -15,6 +15,7 @@ Steps Implemented:
 
 import hashlib
 import json
+import random
 from typing import Dict, List, Optional, Set, Tuple, Any
 
 
@@ -376,6 +377,204 @@ def select_meals_with_diversity(
         "history_applied": bool(meal_history),
     }
     return assigned_slots, used_recipe_ids, meta
+
+
+def _build_ranked_bucket_candidates(
+    recipes: List[Dict[str, Any]],
+    slot: str,
+    slot_targets: Dict[str, Dict[str, float]],
+) -> List[Tuple[float, Dict[str, Any]]]:
+    """Build deterministic ranked candidates for one slot from bucket constraints."""
+    slot_target = slot_targets.get(slot, {})
+    ranked: List[Tuple[float, Dict[str, Any]]] = []
+
+    for recipe in recipes:
+        if not _check_slot_thresholds(recipe, slot_target, slot, tolerance_multiplier=1.0):
+            continue
+        ranked.append((calculate_weighted_slot_error(recipe, slot_target), recipe))
+
+    ranked.sort(key=lambda item: (item[0], _get_recipe_name_key(item[1]), _get_stable_recipe_id(item[1])))
+    return ranked
+
+
+def _recent_penalty(
+    recipe_name: str,
+    slot_history: List[str],
+    bucket_size: int,
+) -> float:
+    """Apply spec diversity penalties with easing for small buckets."""
+    if not recipe_name:
+        return 0.0
+
+    penalty = 0.0
+    if slot_history and slot_history[0] == recipe_name:
+        penalty = LAST_24H_REPEAT_PENALTY
+    elif recipe_name in slot_history[1:3]:
+        penalty = RECENT_REPEAT_PENALTY
+
+    # Small dataset mode: allow reuse after 2-3 days by reducing pressure.
+    if bucket_size <= 3 and penalty == RECENT_REPEAT_PENALTY:
+        return 0.0
+    if bucket_size <= 6:
+        penalty *= 0.7
+
+    return round(penalty, 6)
+
+
+def apply_diversity_aware_final_selection(
+    assigned_slots: Dict[str, Optional[Dict[str, Any]]],
+    recipes: List[Dict[str, Any]],
+    slot_targets: Dict[str, Dict[str, float]],
+    meal_history: Optional[Dict[str, List[str]]] = None,
+    selection_seed: str = "",
+) -> Tuple[Dict[str, Optional[Dict[str, Any]]], Dict[str, Any]]:
+    """Run diversity-aware random top-3 selection after bucket generation.
+
+    This layer must run only after bucket generation/redistribution has produced a valid
+    baseline assignment. Nutrition fit remains primary via weighted error ordering.
+    """
+    if not assigned_slots:
+        return assigned_slots, {"applied": False, "reason": "empty_assignment"}
+
+    history = _normalize_meal_history(meal_history)
+    selected_slots: Dict[str, Optional[Dict[str, Any]]] = dict(assigned_slots)
+    used_ids: Set[str] = {
+        _get_stable_recipe_id(recipe)
+        for recipe in selected_slots.values()
+        if recipe is not None
+    }
+
+    slot_candidate_map: Dict[str, List[Tuple[float, float, Dict[str, Any], bool]]] = {}
+    all_repeated_fallback_slots: List[str] = []
+
+    # First pass: per-slot top-3 random pick using final_score = error + diversity_penalty.
+    for slot in MEAL_SLOTS:
+        ranked = _build_ranked_bucket_candidates(recipes, slot, slot_targets)
+        if not ranked:
+            continue
+
+        current_recipe = selected_slots.get(slot)
+        current_id = _get_stable_recipe_id(current_recipe) if current_recipe is not None else ""
+        if current_id:
+            used_ids.discard(current_id)
+
+        slot_history = history.get(slot, [])
+        scored: List[Tuple[float, float, Dict[str, Any], bool]] = []
+        non_repeated: List[Tuple[float, float, Dict[str, Any], bool]] = []
+
+        for error_score, recipe in ranked:
+            name_key = _get_recipe_name_key(recipe)
+            is_recent_repeat = name_key in slot_history[:3]
+            penalty = _recent_penalty(name_key, slot_history, len(ranked))
+            final_score = round(error_score + penalty, 6)
+            row = (final_score, error_score, recipe, is_recent_repeat)
+            scored.append(row)
+            if not is_recent_repeat:
+                non_repeated.append(row)
+
+        # Repeat control primary rule: avoid recent repeats where possible.
+        working = non_repeated if non_repeated else scored
+        if not non_repeated:
+            all_repeated_fallback_slots.append(slot)
+
+        working.sort(key=lambda item: (item[0], _get_recipe_name_key(item[2]), _get_stable_recipe_id(item[2])))
+        slot_candidate_map[slot] = working
+
+        top_k = working[: min(3, len(working))]
+        if not top_k:
+            continue
+
+        rng_seed = f"{selection_seed}|{slot}|{len(top_k)}"
+        rng = random.Random(rng_seed)
+        ordered_indices = list(range(len(top_k)))
+        rng.shuffle(ordered_indices)
+
+        chosen_recipe: Optional[Dict[str, Any]] = None
+        for idx in ordered_indices:
+            candidate_recipe = top_k[idx][2]
+            cid = _get_stable_recipe_id(candidate_recipe)
+            if cid in used_ids:
+                continue
+            chosen_recipe = candidate_recipe
+            used_ids.add(cid)
+            break
+
+        if chosen_recipe is None:
+            # Edge-case fallback: ignore diversity and pick lowest nutrition error.
+            for _, error_score, candidate_recipe, _ in sorted(working, key=lambda item: (item[1], item[0])):
+                cid = _get_stable_recipe_id(candidate_recipe)
+                if cid in used_ids:
+                    continue
+                chosen_recipe = candidate_recipe
+                used_ids.add(cid)
+                break
+
+        if chosen_recipe is not None:
+            selected_slots[slot] = chosen_recipe
+        elif current_recipe is not None:
+            selected_slots[slot] = current_recipe
+
+        final_recipe = selected_slots.get(slot)
+        if final_recipe is not None:
+            used_ids.add(_get_stable_recipe_id(final_recipe))
+
+    # Global repeat control: allow partial reuse but ensure at least 50% new meals.
+    def _count_recent_repeats(plan_slots: Dict[str, Optional[Dict[str, Any]]]) -> int:
+        repeats = 0
+        for slot in MEAL_SLOTS:
+            recipe = plan_slots.get(slot)
+            if recipe is None:
+                continue
+            if _get_recipe_name_key(recipe) in history.get(slot, [])[:3]:
+                repeats += 1
+        return repeats
+
+    repeat_count = _count_recent_repeats(selected_slots)
+    min_new_meals = 2
+
+    if repeat_count > 2 or (len(MEAL_SLOTS) - repeat_count) < min_new_meals:
+        for slot in MEAL_SLOTS:
+            current_recipe = selected_slots.get(slot)
+            if current_recipe is None:
+                continue
+            current_name = _get_recipe_name_key(current_recipe)
+            if current_name not in history.get(slot, [])[:3]:
+                continue
+
+            alternatives = [
+                item for item in slot_candidate_map.get(slot, [])
+                if not item[3]
+            ]
+            alternatives.sort(key=lambda item: (item[0], item[1]))
+
+            for _, _, alt_recipe, _ in alternatives:
+                alt_id = _get_stable_recipe_id(alt_recipe)
+                current_id = _get_stable_recipe_id(current_recipe)
+                if alt_id in used_ids and alt_id != current_id:
+                    continue
+
+                selected_slots[slot] = alt_recipe
+                if alt_id != current_id:
+                    used_ids.discard(current_id)
+                    used_ids.add(alt_id)
+                break
+
+            repeat_count = _count_recent_repeats(selected_slots)
+            if repeat_count <= 2 and (len(MEAL_SLOTS) - repeat_count) >= min_new_meals:
+                break
+
+    # Guarantee output by preserving already-assigned slot recipes.
+    for slot in MEAL_SLOTS:
+        if selected_slots.get(slot) is None and assigned_slots.get(slot) is not None:
+            selected_slots[slot] = assigned_slots[slot]
+
+    meta = {
+        "applied": True,
+        "repeat_count": _count_recent_repeats(selected_slots),
+        "new_meal_count": len(MEAL_SLOTS) - _count_recent_repeats(selected_slots),
+        "all_repeated_fallback_slots": all_repeated_fallback_slots,
+    }
+    return selected_slots, meta
 
 
 # ============================================================================
