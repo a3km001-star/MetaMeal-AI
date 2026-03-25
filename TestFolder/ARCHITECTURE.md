@@ -1,353 +1,176 @@
-# Meal Planner Architecture Overview
+# Meal Planner Architecture Overview (Current)
 
-## Request Processing Pipeline
+This document describes the current implementation of the production meal planner, including internal selection mechanics, fallback guarantees, and response behavior.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      FastAPI Endpoint                           │
-│  POST /meal/generate → meal_controller.py                       │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ 1. INPUT VALIDATION                                              │
-│    • MealRequest model validation                                │
-│    • Age: 15-100, Weight: 30-300kg, Height: 100-250cm           │
-│    • Sex, diet_type, activity_level, goal normalization         │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ 2. METABOLIC CALCULATION                                         │
-│    metabolic_calculator.py                                      │
-│    ├─ BMR: Mifflin-St Jeor equation                              │
-│    ├─ TDEE: BMR × activity_level_multiplier                     │
-│    └─ Goal Adjustment: ±20%, min 1200F/1500M kcal               │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ 3. MACRO CALCULATION                                             │
-│    macro_split.py                                               │
-│    ├─ Protein: weight_kg × 1.8g/kg (protein-priority)           │
-│    ├─ Carbs: Remaining calories × goal_ratio                    │
-│    └─ Fat: Remaining calories × goal_ratio                      │
-│                                                                  │
-│    Goal Ratios:                                                  │
-│    • Fat Loss:    40% P / 30% C / 30% F                          │
-│    • Muscle Gain: 30% P / 45% C / 25% F                          │
-│    • Maintenance: 30% P / 40% C / 30% F                          │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ 4. DATASET PREPARATION                                           │
-│    meal_planner.py:_prepare_foods_for_profile()                 │
-│    ├─ Load 500+ recipes from JSON                               │
-│    ├─ Scale nutrition: per-100g → age-based portion (85-110g)   │
-│    ├─ Create variants: 1.0x, 1.5x, 2.0x, 2.5x, 3.0x            │
-│    └─ Sanity check macro values (no outliers)                   │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ 5. FILTERING                                                     │
-│    constraint_solver.py                                         │
-│    ├─ filter_by_diet()                                           │
-│    │  └─ Remove non-matching diet type (veg/non_veg/vegan)      │
-│    └─ filter_by_allergies()                                      │
-│       └─ Keyword-based allergen detection                        │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-        ┌────────────────────┴────────────────────┐
-        │                                         │
-        ▼                                         ▼
-┌─────────────────────────────┐    ┌──────────────────────────────┐
-│ 6a. FIRST ATTEMPT           │    │ 6b. FALLBACK ATTEMPTS        │
-│ generate_meal_plan()        │    │ (if initial fails)           │
-│ • Random + match            │    │ • Macro-aware generation     │
-│ • Tolerance: ±10%           │    │ • Beam-search algorithm      │
-│ • Quick, good for easy case │    │ • Adaptive tolerance         │
-│ • Max attempts: 150         │    │ • Max attempts: 250          │
-└─────────────────────────────┘    └──────────────────────────────┘
-        │                                         │
-        └────────────────┬────────────────────────┘
-                         │
-                         ▼
-        ┌────────────────────────────────────┐
-        │ BEAM-SEARCH ALGORITHM              │
-        │ (Fallback or attempt 4+)           │
-        │ ├─ Select top 80 candidate foods   │
-        │ ├─ Expand beam state progressively │
-        │ ├─ Keep best 250 per depth level   │
-        │ ├─ Select best final combination   │
-        │ └─ Guaranteed 4-meal output        │
-        └────────────────────────────────────┘
-                         │
-                         ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ 7. STRUCTURE PLANNING                                            │
-│    _structure_solver_plan()                                      │
-│    ├─ Meal 1 → Breakfast                                         │
-│    ├─ Meal 2 → Lunch                                             │
-│    ├─ Meal 3 → Dinner                                            │
-│    └─ Meal 4 → Snack                                             │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ 8. SUPPLEMENT GAP FILLING                                        │
-│    supplement_solver.py:fill_macro_gap()                        │
-│    ├─ Calculate actual macros from meals                         │
-│    ├─ Detect gaps (target - actual)                              │
-│    ├─ If protein gap > 5g:                                       │
-│    │  ├─ Select diet-compliant supplement                       │
-│    │  ├─ Cap at 30% total protein                                │
-│    │  └─ Cap at 20% total calories                               │
-│    └─ Supplements: Whey / Greek Yogurt / Tofu                    │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ 9. VALIDATION                                                    │
-│    meal_validator.py:validate_meal_plan()                        │
-│    ├─ Calorie check: ±10% of target                              │
-│    ├─ Macro checks: ±20% each (protein/carbs/fat)                │
-│    ├─ Diet compliance: all meals match diet type                 │
-│    ├─ Allergen check: no allergen in any meal                    │
-│    └─ If invalid: retry from step 6                              │
-└────────────────────────────┬─────────────────────────────────────┘
-                             │
-                ┌────────────┴────────────┐
-                │                         │
-           VALID ✅               INVALID ❌
-                │                         │
-                │                    Retry
-                │                (max 5 attempts)
-                │                         │
-                └────────────┬────────────┘
-                             │
-                             ▼
-┌──────────────────────────────────────────────────────────────────┐
-│ 10. FORMATTING & RESPONSE                                        │
-│     format_meal_plan() + to_frontend_response()                  │
-│     ├─ Normalize meal names & fields                             │
-│     ├─ Round all numeric values                                  │
-│     └─ Return JSON:                                              │
-│        {                                                         │
-│          "calorie_target": 2000,                                 │
-│          "macros": {                                             │
-│            "protein": 200,                                       │
-│            "carbs": 150,                                         │
-│            "fat": 70                                             │
-│          },                                                      │
-│          "meal_plan": {                                          │
-│            "breakfast": {...},                                   │
-│            "lunch": {...},                                       │
-│            "dinner": {...},                                      │
-│            "snack": {...}                                        │
-│          },                                                      │
-│          "supplements": [{...}],                                 │
-│          "warnings": [...]                                       │
-│        }                                                         │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-## Key Modules & Their Responsibilities
+## 1. Request to Response Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     ORCHESTRATION LAYER                          │
-├─────────────────────────────────────────────────────────────────┤
-│ meal_planner.py (988 lines)                                     │
-│ • Core orchestration (_generate_validated_meal_plan)            │
-│ • Regeneration logic (5 attempts with fallback)                 │
-│ • Portion scaling & data prep                                   │
-│ • Beam-search implementation                                    │
-└─────────────────────────────────────────────────────────────────┘
-         │              │              │              │
-         ▼              ▼              ▼              ▼
-    ┌────────┐    ┌─────────┐    ┌────────┐    ┌──────────┐
-    │ Metabolic│  │ Macro   │    │Scoring │    │Structured│
-    │Calculator│  │  Split  │    │Function│    │  Plan    │
-    ├────────┤    └─────────┘    └────────┘    └──────────┘
-    │ BMR    │
-    │ TDEE   │
-    │ Goal   │
-    │ Adjust │
-    └────────┘
-
-        UTILITY LAYER
-┌─────────────────────────────▬────────────────────────────────┐
-│                                                               │
-├────────────────┐    ├────────────────┐    ├─────────────────┤
-│constraint_     │    │meal_validator  │    │supplement_      │
-│solver.py       │    │.py             │    │solver.py        │
-│                │    │                │    │                 │
-│• Diet filter   │    │• Calorie check │    │• Gap detection  │
-│• Allergy       │    │• Macro check   │    │• Supplement     │
-│  filter        │    │• Diet          │    │  selection      │
-│• Variety check │    │  compliance    │    │• Diet matching  │
-│• Meal          │    │• Allergen      │    │• Constraints    │
-│  generation    │    │  validation    │    │  application    │
-└────────────────┘    └────────────────┘    └─────────────────┘
+POST /meal/generate
+    -> routes/meal.py
+    -> controllers/meal_controller.py
+    -> services/nutrition_engine/meal_planner.py
+    -> services/nutrition_engine/meal_validator.py
+    -> frontend JSON response
 ```
 
-## Data Flow: From Input to Output
+## 2. Core Modules
 
+- `server/model/meal_model.py`
+  - Validates incoming payload (`age`, `sex`, `height`, `weight`, `diet_type`, `goal`, `allergies`, optional `last_meals`).
+- `server/services/nutrition_engine/meal_planner.py`
+  - Main orchestration and retry loop.
+- `server/services/nutrition_engine/spec_compliant_steps.py`
+  - Split targets, weighted error, diversity-aware selection, redistribution, local swap optimization.
+- `server/services/nutrition_engine/supplement_solver.py`
+  - Macro gap filling with constraints.
+- `server/services/nutrition_engine/meal_validator.py`
+  - Final calorie/macro/diet/allergy/structure validation.
+- `server/services/nutrition_engine/meal_formatter.py`
+  - Response shaping for frontend.
+
+## 3. Internal Pipeline (Implemented)
+
+1. Input validation
+2. BMR/TDEE and goal-adjusted calories
+3. Carb baseline subtraction (`-390 kcal`)
+4. Macro target calculation
+5. Dataset normalization + age-based scaling
+6. Diet/allergy filtering
+7. Meal split by slot (`25/35/30/10`)
+8. Diversity-aware slot selection
+9. Redistribution for empty slots
+10. Local swap optimization
+11. Supplement solver
+12. Final validation
+13. Formatting and output
+
+## 4. Diversity-Aware Selection Engine
+
+The engine does not use pure random choice and does not always pick strict minimum error.
+
+### 4.1 Candidate score
+
+For each recipe candidate in a slot:
+
+`final_score = error_score + diversity_penalty`
+
+Where:
+
+- `error_score = 0.60*cal_err + 0.25*protein_err + 0.10*carb_err + 0.05*fat_err`
+- `diversity_penalty` is based on recent `last_meals` history.
+
+### 4.2 History penalties
+
+- repeated in last 24h: `+0.5`
+- repeated in recent 1-2 day window: `+0.2`
+- repeated in 2 consecutive days: hard-block penalty unless fallback requires reuse
+
+### 4.3 Top-K controlled selection
+
+1. Sort by `(final_score, recipe_name, stable_recipe_id)`
+2. Keep top `k` (`3` to `5` depending on candidate count)
+3. Pick one deterministically from top-k using hash-seeded index
+
+This preserves determinism while improving diversity.
+
+### 4.4 Duplicate prevention
+
+- Same recipe cannot be used in multiple slots on the same day.
+- Dedup uses stable content-based recipe IDs (`_get_stable_recipe_id`), not memory addresses.
+
+## 5. Empty Bucket and Fallback Safety
+
+If strict slot fill fails, planner applies deterministic fallback levels:
+
+1. Redistribution
+2. Borrowing from other bucket candidate pools
+3. Relaxed thresholds (`±18%` calories, `±25%` protein)
+4. Snack-oriented fallback candidate strategy
+5. Global best match (ignore diversity constraints if needed)
+
+Guarantee: planner always returns a filled meal JSON structure, even in fallback mode.
+
+## 6. Retry Strategy
+
+The planner runs up to 5 attempts:
+
+- Attempts 1-3: strict scale path
+- Attempts 4-5: fallback scaling path (`multiply_factor = 2.5`)
+
+If validation still fails after all retries, it returns the best deterministic candidate with warnings and solver metadata.
+
+## 7. Validation Gate (Hard Checks)
+
+`validate_meal_plan(...)` enforces:
+
+- calorie tolerance
+- macro tolerances (protein/carbs/fat)
+- diet compliance
+- allergy compliance
+- required meal structure and fields
+
+Strict success requires all checks to pass.
+
+## 8. Response Contract
+
+Successful API envelope:
+
+```json
+{
+  "success": true,
+  "message": "Meal plan generated successfully",
+  "data": {
+    "calorie_target": 1739.38,
+    "macros": {
+      "protein": 117.0,
+      "carbs": 110.2,
+      "fat": 49.0
+    },
+    "meal_plan": {
+      "breakfast": {
+        "name": "...",
+        "calories": 0,
+        "ingredients": "...",
+        "instructions": "..."
+      },
+      "lunch": {
+        "name": "...",
+        "calories": 0,
+        "ingredients": "...",
+        "instructions": "..."
+      },
+      "dinner": {
+        "name": "...",
+        "calories": 0,
+        "ingredients": "...",
+        "instructions": "..."
+      },
+      "snack": {
+        "name": "...",
+        "calories": 0,
+        "ingredients": "...",
+        "instructions": "..."
+      }
+    },
+    "supplements": [{ "name": "...", "protein": 0, "calories": 0 }],
+    "solver": {
+      "mode": "strict | fallback",
+      "attempt_count": 1,
+      "fallback_reason": null
+    },
+    "warnings": []
+  }
+}
 ```
-User Input (JSON)
-      │
-      ▼
-MealRequest ← validation & normalization
-      │
-      ├─→ UserProfile (internal model)
-      │
-      ├─→ BMR Calculation
-      │   └─→ TDEE
-      │       └─→ Calorie Target
-      │
-      ├─→ Macro Split
-      │   └─→ Protein / Carbs / Fat targets
-      │
-      ├─→ Food Dataset
-      │   ├─→ Normalize & scale (per-100g → portion)
-      │   ├─→ Create variants
-      │   └─→ Filter (diet + allergies)
-      │
-      ├─→ Meal Selection Algorithm
-      │   ├─→ Generate initial plan
-      │   ├─→ Fallback 1: Macro-aware
-      │   ├─→ Fallback 2: Beam-search
-      │   └─→ Validation
-      │
-      ├─→ Supplement Solving
-      │   └─→ Fill macro gaps
-      │
-      ├─→ Final Validation
-      │   └─→ All checks pass?
-      │
-      └─→ JSON Response (frontend-ready)
-```
 
-## Attempt Strategy (5-attempt fallback)
+## 9. Determinism Notes
 
-```
-ATTEMPT 1
-─────────
-generate_meal_plan()
-├─ Calorie target: 90% of goal
-├─ Tolerance: ±10%
-└─ Max iterations: 150
+- No unconstrained randomness.
+- Stable sorting and stable IDs are used for reproducibility.
+- Top-k selection uses deterministic hashing, not non-deterministic RNG.
 
-    ✅ Valid?
-    │
-    ├─ NO → Attempt 2
-    └─ YES → Return
+## 10. Operational Guidance
 
-ATTEMPT 2
-─────────
-generate_macro_aware_meal_plan()
-├─ Calorie target: 87-90% of goal
-├─ Protein-focused
-├─ Tolerance: ±12-15%
-└─ Max iterations: 250
-
-    ✅ Valid?
-    │
-    ├─ NO → Attempt 3
-    └─ YES → Return
-
-ATTEMPT 3
-─────────
-generate_macro_aware_meal_plan()
-├─ Calorie target: 85% of goal
-├─ Carb-priority (if vegan)
-├─ Tolerance: ±15%
-└─ Max iterations: 250
-
-    ✅ Valid?
-    │
-    ├─ NO → Attempt 4
-    └─ YES → Return
-
-ATTEMPT 4 & 5
-─────────────
-_generate_beam_search_plan()
-├─ Calorie target: 88-93% of goal
-├─ Beam width: 250 states
-├─ Tolerance: ±12-15%
-└─ Guaranteed 4 meals
-
-    ✅ Valid?
-    │
-    ├─ NO → Attempt 5
-    └─ YES → Return
-
-NO VALID PLAN AFTER 5 ATTEMPTS
-──────────────────────────────
-Return best candidate with warnings
-└─ "Returned best available plan after retries..."
-```
-
-## Error Handling Decision Tree
-
-```
-                         Request
-                            │
-                            ▼
-                      Validate Input
-                            │
-           ┌────────────────┼────────────────┐
-           │                │                │
-          ❌ INVALID       ✅ VALID          │
-           │                │                │
-           ▼                │                ▼
-    HTTP 400           Continue           Dataset
-  "Invalid input"      Generation         Check
-           │                │                │
-           │                ├────────────┬──┼──┬────────────┐
-           │                │            │  │  │            │
-           │                └─ Found?    │  │  │         Not Found
-           │                    │        │  │  │            │
-           │                    ✅       │  │  │            ▼
-           │                    │        │  │  │       HTTP 500
-           │                    ▼        │  │  │    "Dataset missing"
-           │            Run Algorithm    │  │  │
-           │              (5 attempts)   │  │  │
-           │                    │        │  │  │
-           │                    ├─ Pass? ──┴──┤
-           │                    │             │
-           │                   ✅             ❌
-           │                    │             │
-           │                    ▼             │
-           │           Format Response       │
-           │                    │             │
-           │                    ▼             ▼
-           │              JSON OK       HTTP 400
-           │                    │      "No valid plan"
-           │                    │
-           ├────────────────────┤
-           │                    │
-           └────────────────────┘
-                    │
-                    ▼
-              Response to Client
-```
-
----
-
-## Summary Statistics
-
-| Metric                | Value     | Notes                        |
-| --------------------- | --------- | ---------------------------- |
-| Lines of core code    | ~988      | meal_planner.py              |
-| Supported meals       | 4         | breakfast/lunch/dinner/snack |
-| Regeneration attempts | 5         | with adaptive strategies     |
-| Max foods considered  | ~80       | for beam search              |
-| Beam width            | 250       | states per depth             |
-| Calorie tolerance     | ±10%      | for final validation         |
-| Macro tolerance       | ±20%      | per nutrient                 |
-| Portion options       | 5         | 1x to 3x multipliers         |
-| Supplements           | 3         | whey/yogurt/tofu             |
-| Average response time | 200-500ms | estimate                     |
+- Track fallback frequency (`solver.mode == fallback`) as quality KPI.
+- Capture warnings and attempt counts in logs/metrics.
+- If quality degrades for a cohort, inspect filter strictness and dataset coverage for that cohort.
