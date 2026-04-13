@@ -29,7 +29,7 @@ from services.nutrition_engine.spec_compliant_steps import (
 )
 
 
-class TestResults:
+class ResultTracker:
     """Track test results"""
     def __init__(self):
         self.passed = 0
@@ -88,7 +88,7 @@ class TestResults:
 def test_step2_carb_baseline():
     """Test STEP 2: Carb Baseline Adjustment"""
     print("\n[STEP 2] Testing Carb Baseline Adjustment")
-    results = TestResults()
+    results = ResultTracker()
 
     # Test normal case
     target = 2000.0
@@ -108,6 +108,9 @@ def test_step2_carb_baseline():
     results.assert_equal(adjusted, 2610.0, "Large calorie target (3000 - 390 = 2610)")
 
     print("STEP 2 Results:", f"Passed {results.passed}/{results.passed + results.failed}")
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        assert results.failed == 0
+        return
     return results
 
 
@@ -118,7 +121,7 @@ def test_step2_carb_baseline():
 def test_step4_age_multiply_factor():
     """Test STEP 4: Age-Based Multiply Factor"""
     print("\n[STEP 4] Testing Age-Based Multiply Factor")
-    results = TestResults()
+    results = ResultTracker()
 
     # Test all age ranges
     test_cases = [
@@ -165,6 +168,9 @@ def test_step4_age_multiply_factor():
     results.assert_equal(scaled["Protein"], 20.0, "Valid protein scaled (10 * 2)")
 
     print("STEP 4 Results:", f"Passed {results.passed}/{results.passed + results.failed}")
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        assert results.failed == 0
+        return
     return results
 
 
@@ -175,7 +181,7 @@ def test_step4_age_multiply_factor():
 def test_step5_meal_split():
     """Test STEP 5: Meal Split (Calorie Distribution)"""
     print("\n[STEP 5] Testing Meal Split")
-    results = TestResults()
+    results = ResultTracker()
 
     # Test calorie split
     daily_calories = 2000.0
@@ -210,6 +216,9 @@ def test_step5_meal_split():
     results.assert_equal(macro_split["lunch"]["calories"], 700.0, "Lunch calorie target")
 
     print("STEP 5 Results:", f"Passed {results.passed}/{results.passed + results.failed}")
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        assert results.failed == 0
+        return
     return results
 
 
@@ -220,7 +229,7 @@ def test_step5_meal_split():
 def test_step6_thresholds():
     """Test STEP 6: Calorie and Protein Thresholds"""
     print("\n[STEP 6] Testing Threshold Checks")
-    results = TestResults()
+    results = ResultTracker()
 
     # Test breakfast calorie threshold (±10%)
     slot_calories = 500.0
@@ -278,13 +287,16 @@ def test_step6_thresholds():
     )
 
     print("STEP 6 Results:", f"Passed {results.passed}/{results.passed + results.failed}")
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        assert results.failed == 0
+        return
     return results
 
 
 def test_step6_bucket_assignment():
     """Test STEP 6: Recipe Bucket Assignment"""
     print("\n[STEP 6] Testing Bucket Assignment")
-    results = TestResults()
+    results = ResultTracker()
 
     # Create sample slot targets
     slot_targets = {
@@ -355,6 +367,9 @@ def test_step6_bucket_assignment():
     results.assert_equal(assigned, None, "Recipe not assigned if exceeds all tolerances")
 
     print("STEP 6 Results:", f"Passed {results.passed}/{results.passed + results.failed}")
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        assert results.failed == 0
+        return
     return results
 
 
@@ -365,7 +380,7 @@ def test_step6_bucket_assignment():
 def test_step7_validity():
     """Test STEP 7: Validity Check (all 4 slots filled)"""
     print("\n[STEP 7] Testing Validity Check")
-    results = TestResults()
+    results = ResultTracker()
 
     # Valid plan: all 4 slots filled
     valid_plan = {
@@ -408,6 +423,9 @@ def test_step7_validity():
     results.assert_true(not is_plan_valid(invalid_plan_3), "Empty plan is invalid")
 
     print("STEP 7 Results:", f"Passed {results.passed}/{results.passed + results.failed}")
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        assert results.failed == 0
+        return
     return results
 
 
@@ -418,7 +436,7 @@ def test_step7_validity():
 def test_edge_cases():
     """Test edge cases and boundary conditions"""
     print("\n[EDGE CASES] Testing Boundary Conditions and Edge Cases")
-    results = TestResults()
+    results = ResultTracker()
 
     # Edge case 1: Very low age (15, minimum)
     factor_15 = get_age_multiply_factor(15)
@@ -473,6 +491,9 @@ def test_edge_cases():
     results.assert_equal(assigned, "snack", "Snack recipe assigned to snack when macros fit")
 
     print("[EDGE CASES] Results:", f"Passed {results.passed}/{results.passed + results.failed}")
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        assert results.failed == 0
+        return
     return results
 
 
@@ -483,7 +504,7 @@ def test_edge_cases():
 def test_macro_accuracy():
     """Test macro accuracy within specification tolerances"""
     print("\n[MACRO ACCURACY] Testing Tolerance Thresholds")
-    results = TestResults()
+    results = ResultTracker()
 
     # Test calorie threshold using actual implementation function
     # Using breakfast which has ±10% tolerance
@@ -519,6 +540,9 @@ def test_macro_accuracy():
     )
 
     print("[MACRO ACCURACY] Results:", f"Passed {results.passed}/{results.passed + results.failed}")
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        assert results.failed == 0
+        return
     return results
 
 
@@ -529,7 +553,7 @@ def test_macro_accuracy():
 def test_diet_constraints():
     """Test diet type constraints (vegan, vegetarian, non-veg)"""
     print("\n[DIET CONSTRAINTS] Testing Diet Type Handling")
-    results = TestResults()
+    results = ResultTracker()
 
     # These would be tested via the constraint_solver module
     # Confirming test structure
@@ -537,6 +561,9 @@ def test_diet_constraints():
     results.assert_true(True, "Diet constraint tests require constraint_solver integration")
 
     print("[DIET CONSTRAINTS] Results:", f"Passed {results.passed}/{results.passed + results.failed}")
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        assert results.failed == 0
+        return
     return results
 
 
@@ -550,7 +577,7 @@ def run_all_tests():
     print("SPEC-COMPLIANT MEAL PLANNING - COMPREHENSIVE TEST SUITE")
     print("="*70)
 
-    all_results = TestResults()
+    all_results = ResultTracker()
 
     # Run all test suites
     test_suites = [

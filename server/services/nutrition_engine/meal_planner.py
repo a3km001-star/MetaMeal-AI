@@ -37,6 +37,7 @@ from services.nutrition_engine.macro_split import MacroSplit, calculate_macros
 from services.nutrition_engine.metabolic_calculator import (
     ActivityLevel,
     FitnessGoal,
+    GOAL_ADJUSTMENTS,
     Sex,
     calculate_bmr,
     calculate_tdee,
@@ -58,11 +59,6 @@ from utils.helpers import load_food_dataset
 
 logger = logging.getLogger(__name__)
 
-GOAL_ADJUSTMENTS: Dict[FitnessGoal, float] = {
-    FitnessGoal.FAT_LOSS: -0.20,
-    FitnessGoal.MUSCLE_GAIN: 0.15,
-    FitnessGoal.MAINTENANCE: 0.0,
-}
 MIN_CALORIES_BY_SEX: Dict[Sex, int] = {
     Sex.MALE: 1500,
     Sex.FEMALE: 1200,

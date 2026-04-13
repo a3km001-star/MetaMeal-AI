@@ -33,6 +33,7 @@ class FitnessGoal(str, Enum):
     FAT_LOSS = "fat_loss"  # Weight loss / cutting
     MUSCLE_GAIN = "muscle_gain"  # Muscle building / bulking
     MAINTENANCE = "maintenance"  # Maintain current weight
+    ENDURANCE = "endurance"  # Performance/endurance support
 
 
 # Activity level multipliers for TDEE calculation
@@ -47,8 +48,9 @@ ACTIVITY_MULTIPLIERS: Dict[ActivityLevel, float] = {
 # Goal-based calorie adjustments (percentage)
 GOAL_ADJUSTMENTS: Dict[FitnessGoal, float] = {
     FitnessGoal.FAT_LOSS: -0.20,  # 20% deficit for fat loss
-    FitnessGoal.MUSCLE_GAIN: 0.10,  # 10% surplus for muscle gain
+    FitnessGoal.MUSCLE_GAIN: 0.15,  # 15% surplus for muscle gain
     FitnessGoal.MAINTENANCE: 0.0,  # No adjustment for maintenance
+    FitnessGoal.ENDURANCE: 0.05,  # Small surplus for endurance training support
 }
 
 

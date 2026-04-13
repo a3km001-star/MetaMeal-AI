@@ -63,9 +63,9 @@ class MealRequest(BaseModel):
 	@classmethod
 	def validate_goal(cls, value: str) -> str:
 		normalized = str(value).strip().lower()
-		allowed = {"fat_loss", "muscle_gain", "maintenance"}
+		allowed = {"fat_loss", "muscle_gain", "maintenance", "endurance"}
 		if normalized not in allowed:
-			raise ValueError("goal must be one of: fat_loss, muscle_gain, maintenance")
+			raise ValueError("goal must be one of: fat_loss, muscle_gain, maintenance, endurance")
 		return normalized
 
 	@field_validator("allergies", mode="before")
