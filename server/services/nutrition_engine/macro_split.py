@@ -35,6 +35,10 @@ MACRO_RATIOS: Dict[FitnessGoal, Tuple[float, float, float]] = {
     # Maintenance: Balanced (30%, 40%, 30%)
     # Balanced approach for body composition maintenance
     FitnessGoal.MAINTENANCE: (0.30, 0.40, 0.30),
+
+    # Endurance: Moderate protein, high carbs, lower fat
+    # Carbohydrate-forward split to support sustained training workloads
+    FitnessGoal.ENDURANCE: (0.25, 0.55, 0.20),
 }
 
 
@@ -43,6 +47,7 @@ PROTEIN_PER_KG: Dict[FitnessGoal, float] = {
     FitnessGoal.FAT_LOSS: 1.8,      # Realistic high-protein target for sustainable deficit plans
     FitnessGoal.MUSCLE_GAIN: 1.8,   # Practical hypertrophy target with mixed-food datasets
     FitnessGoal.MAINTENANCE: 1.8,   # Maintenance level
+    FitnessGoal.ENDURANCE: 1.6,     # Endurance-supportive protein target
 }
 
 
