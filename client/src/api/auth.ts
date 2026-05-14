@@ -1,17 +1,14 @@
 import { apiClient } from "./client";
 
-export interface RegisterPayload {
-  name: string;
-  email: string;
-  password: string;
-  age: string;
-  height: string;
-  weight: string;
-  workoutExperience: string;
-  dietPreference: string;
-  goal: string;
-  activityLevel: string;
-}
+export const registerUser = async (payload: any) => {
+  return apiClient.post("/auth/register", payload);
+};
 
-export const registerUser = (payload: RegisterPayload) =>
-  apiClient.post("/register", payload);
+export const loginUser = async (payload: any) => {
+  return apiClient.post("/auth/login", payload);
+};
+
+// Use the new /me endpoint from your latest schema
+export const getMe = async () => {
+  return apiClient.get("/me");
+};

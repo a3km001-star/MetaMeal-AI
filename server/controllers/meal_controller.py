@@ -1,26 +1,59 @@
 """Controller functions for meal planner API endpoints."""
 
 import logging
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 from fastapi import HTTPException
 from pydantic import ValidationError
 
 from model.meal_model import MealRequest
+from services.auth_service import update_user_details, record_meal_generation_event
 from services.nutrition_engine.meal_planner import UserProfile, create_meal_plan_response
+from services.nutrition_engine.metabolic_calculator import Sex, ActivityLevel, FitnessGoal
 
 
 logger = logging.getLogger(__name__)
 
 
-def generate_meal_plan_controller(request_data: Union[MealRequest, Dict[str, Any]]) -> Dict[str, Any]:
+def generate_meal_plan_controller(
+	request_data: Union[MealRequest, Dict[str, Any]],
+	current_user: Optional[dict] = None,
+) -> Dict[str, Any]:
 	"""Validate input and generate a meal plan response for the API layer."""
 	try:
 		payload = request_data if isinstance(request_data, MealRequest) else MealRequest(**request_data)
 		logger.info("Meal generation request received")
 
-		user_profile = UserProfile(**payload.model_dump())
+		# Convert string values to enum instances for UserProfile
+		user_profile_data = payload.model_dump()
+		user_profile_data["sex"] = Sex(payload.sex)
+		user_profile_data["activity_level"] = ActivityLevel(payload.activity_level)
+		user_profile_data["goal"] = FitnessGoal(payload.goal)
+
+		user_profile = UserProfile(**user_profile_data)
+
+		if current_user is not None:
+			try:
+				record_meal_generation_event(current_user["id"], payload.model_dump(mode="json"))
+			except Exception as exc:
+				logger.warning("Failed to record meal generation metadata: %s", exc)
+
 		response = create_meal_plan_response(user_profile)
+
+		if current_user is not None:
+			try:
+				update_user_details(current_user["id"], {
+					"age": int(payload.age),
+					"sex": payload.sex,
+					"height": float(payload.height),
+					"weight": float(payload.weight),
+					"diet_type": payload.diet_type,
+					"activity_level": payload.activity_level.value,
+					"goal": payload.goal.value,
+					"allergies": payload.allergies,
+				})
+			except Exception as exc:
+				logger.warning("Failed to update user details: %s", exc)
 
 		logger.info("Meal planner executed")
 		logger.info("Meal plan successfully generated")
