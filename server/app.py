@@ -9,7 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from db.mongo import test_connection
 from model.auth_model import UserResponse
 from routes.auth import auth_router
+from routes.chat import chat_router
 from routes.meal import meal_router
+from routes.progress import progress_router
 from routes.sync import sync_router
 from routes.workout import workout_router
 from services.auth_service import get_current_user
@@ -46,7 +48,9 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(chat_router, prefix="/chat")
 app.include_router(meal_router, prefix="/meal")
+app.include_router(progress_router, prefix="/progress")
 app.include_router(workout_router, prefix="/workout")
 app.include_router(sync_router, prefix="/sync")
 

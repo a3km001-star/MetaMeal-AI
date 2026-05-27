@@ -71,6 +71,19 @@ npm run dev
 
 The app will be available at `http://localhost:5173`
 
+## Backend API Setup
+
+By default, the client uses the hosted API. To point to your local backend:
+
+1. Create `client/.env`
+2. Add:
+
+```ini
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+Restart `npm run dev` after changing env vars.
+
 ### Build
 
 ```bash

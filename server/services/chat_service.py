@@ -1,5 +1,26 @@
-# Fetch context
+"""Service layer for chatbot interactions."""
 
-# Call agent
+import logging
+from typing import Any, Dict, Optional
 
-# Return response
+from fastapi import HTTPException
+
+from ai.agent import ChatAgentError, run_chat
+
+
+logger = logging.getLogger(__name__)
+
+
+def handle_chat(message: str, user_id: Optional[str], conversation_id: Optional[str]) -> Dict[str, Any]:
+	if not user_id:
+		raise HTTPException(status_code=400, detail="user_id is required for chat")
+
+	try:
+		reply, tool_calls = run_chat(message=message, user_id=user_id, conversation_id=conversation_id)
+		return {"reply": reply, "tool_calls": tool_calls}
+	except ChatAgentError as exc:
+		logger.warning("Chat agent error: %s", exc)
+		raise HTTPException(status_code=500, detail=str(exc))
+	except Exception as exc:
+		logger.exception("Chat service failed")
+		raise HTTPException(status_code=500, detail=f"Chat service error: {exc}")

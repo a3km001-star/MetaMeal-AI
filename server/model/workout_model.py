@@ -1,6 +1,6 @@
 """Pydantic request/response models for workout planner endpoints."""
 
-from typing import Dict, List, Literal, Union
+from typing import Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -15,6 +15,7 @@ AllowedDayType = Literal["push", "pull", "legs", "upper", "lower", "full_body", 
 class WorkoutRequest(BaseModel):
 	"""Validated input payload for workout generation."""
 
+	user_id: Optional[str] = None
 	goal: AllowedGoal
 	experience_level: AllowedLevel
 	split: AllowedSplit

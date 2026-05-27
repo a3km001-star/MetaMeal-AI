@@ -1,12 +1,14 @@
 """Controller functions for meal planner API endpoints."""
 
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Union
 
 from fastapi import HTTPException
 from pydantic import ValidationError
 
 from model.meal_model import MealRequest
+from db.mongo import meal_plans_collection
 from services.auth_service import update_user_details, record_meal_generation_event
 from services.nutrition_engine.meal_planner import UserProfile, create_meal_plan_response
 from services.nutrition_engine.metabolic_calculator import Sex, ActivityLevel, FitnessGoal
@@ -42,14 +44,26 @@ def generate_meal_plan_controller(
 
 		if current_user is not None:
 			try:
+				meal_plans_collection.insert_one(
+					{
+						"user_id": current_user.get("id"),
+						"created_at": datetime.now(timezone.utc),
+						"plan": response,
+					}
+				)
+			except Exception as exc:
+				logger.warning("Failed to persist meal plan for chat tools: %s", exc)
+
+		if current_user is not None:
+			try:
 				update_user_details(current_user["id"], {
 					"age": int(payload.age),
 					"sex": payload.sex,
 					"height": float(payload.height),
 					"weight": float(payload.weight),
 					"diet_type": payload.diet_type,
-					"activity_level": payload.activity_level.value,
-					"goal": payload.goal.value,
+					"activity_level": payload.activity_level,
+					"goal": payload.goal,
 					"allergies": payload.allergies,
 				})
 			except Exception as exc:
