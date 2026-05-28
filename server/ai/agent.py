@@ -30,10 +30,17 @@ class ChatAgentError(RuntimeError):
 	"""Raised when the chatbot fails to produce a response."""
 
 
-def _load_history(user_id: str, conversation_id: Optional[str], limit: int = 8) -> List[Dict[str, str]]:
+def _load_history(
+	user_id: str,
+	conversation_id: Optional[str],
+	config_id: Optional[str],
+	limit: int = 8,
+) -> List[Dict[str, str]]:
 	query: Dict[str, Any] = {"user_id": user_id}
 	if conversation_id:
 		query["conversation_id"] = conversation_id
+	if config_id:
+		query["config_id"] = config_id
 
 	items = list(
 		chat_history_collection.find(query)
@@ -44,11 +51,46 @@ def _load_history(user_id: str, conversation_id: Optional[str], limit: int = 8) 
 	return [{"role": item.get("role", "user"), "content": item.get("content", "")} for item in items]
 
 
-def _save_message(user_id: str, role: str, content: str, conversation_id: Optional[str]) -> None:
+def get_history(
+	user_id: str,
+	conversation_id: Optional[str],
+	config_id: Optional[str],
+	limit: int = 50,
+) -> List[Dict[str, Any]]:
+	query: Dict[str, Any] = {"user_id": user_id}
+	if conversation_id:
+		query["conversation_id"] = conversation_id
+	if config_id:
+		query["config_id"] = config_id
+
+	items = list(
+		chat_history_collection.find(query)
+		.sort("created_at", -1)
+		.limit(limit)
+	)
+	items.reverse()
+	return [
+		{
+			"role": item.get("role", "user"),
+			"content": item.get("content", ""),
+			"created_at": item.get("created_at"),
+		}
+		for item in items
+	]
+
+
+def _save_message(
+	user_id: str,
+	role: str,
+	content: str,
+	conversation_id: Optional[str],
+	config_id: Optional[str],
+) -> None:
 	chat_history_collection.insert_one(
 		{
 			"user_id": user_id,
 			"conversation_id": conversation_id,
+			"config_id": config_id,
 			"role": role,
 			"content": content,
 			"created_at": datetime.now(timezone.utc),
@@ -150,10 +192,15 @@ def _execute_tool_call(tool_call: Dict[str, Any], user_id: str) -> Tuple[str, st
 	return name, format_tool_output(result)
 
 
-def run_chat(message: str, user_id: str, conversation_id: Optional[str] = None) -> Tuple[str, List[str]]:
+def run_chat(
+	message: str,
+	user_id: str,
+	conversation_id: Optional[str] = None,
+	config_id: Optional[str] = None,
+) -> Tuple[str, List[str]]:
 	"""Run the chat agent and return the final response plus tool call names."""
 	messages: List[Dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
-	messages.extend(_load_history(user_id, conversation_id))
+	messages.extend(_load_history(user_id, conversation_id, config_id))
 	messages.append({"role": "user", "content": message})
 
 	tool_definitions = get_tool_definitions()
@@ -200,7 +247,7 @@ def run_chat(message: str, user_id: str, conversation_id: Optional[str] = None) 
 		logger.warning("Assistant returned empty content; sending fallback response")
 		final_text = "I could not generate a response right now. Please try again or ask another question."
 
-	_save_message(user_id, "user", message, conversation_id)
-	_save_message(user_id, "assistant", final_text, conversation_id)
+	_save_message(user_id, "user", message, conversation_id, config_id)
+	_save_message(user_id, "assistant", final_text, conversation_id, config_id)
 
 	return final_text, tool_call_names
