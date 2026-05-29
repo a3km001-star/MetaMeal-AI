@@ -22,7 +22,9 @@ const viewRoutes: Record<ViewType, ViewRouteRenderer> = {
     <MealPlannerPage setActiveView={setActiveView} />
   ),
   insights: () => <InsightsPage />,
-  coach: ({ setActiveView }) => <CoachPage setActiveView={setActiveView} />,
+  coach: ({ setActiveView, user }) => (
+    <CoachPage setActiveView={setActiveView} user={user} />
+  ),
   "workout-planner": () => <WorkoutPlannerPage />,
   profile: () => <Profile />,
 };
