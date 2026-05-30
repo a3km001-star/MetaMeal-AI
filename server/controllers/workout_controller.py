@@ -47,3 +47,37 @@ def generate_workout_plan_controller(
 	except Exception:
 		logger.exception("Workout generation failed with internal error")
 		raise HTTPException(status_code=500, detail="Internal server error while generating workout plan")
+
+
+def get_latest_workout_plan_controller(current_user: Optional[dict] = None) -> Dict[str, Any]:
+	"""Retrieve the latest workout plan for the current user."""
+	try:
+		if not current_user or not current_user.get("id"):
+			raise HTTPException(status_code=401, detail="Unauthorized")
+
+		user_id = current_user.get("id")
+		latest_plan = workout_plans_collection.find_one(
+			{"user_id": user_id},
+			sort=[("created_at", -1)]
+		)
+
+		if not latest_plan:
+			return {
+				"success": True,
+				"message": "No workout plan found",
+				"data": None,
+			}
+
+		return {
+			"success": True,
+			"message": "Workout plan retrieved successfully",
+			"data": {
+				"plan": latest_plan.get("plan"),
+				"created_at": latest_plan.get("created_at"),
+			},
+		}
+	except HTTPException:
+		raise
+	except Exception as exc:
+		logger.exception("Failed to retrieve workout plan: %s", exc)
+		raise HTTPException(status_code=500, detail="Failed to retrieve workout plan")

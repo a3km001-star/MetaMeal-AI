@@ -1,6 +1,6 @@
 """Pydantic request models for meal planner endpoints."""
 
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -102,3 +102,16 @@ class MealRequest(BaseModel):
 				raise ValueError("last_meals values must be lists of strings")
 			normalized[meal_type] = [str(item).strip().lower() for item in items if str(item).strip()]
 		return normalized
+
+
+class SaveMealRequest(BaseModel):
+	"""Request payload for saving a generated meal plan."""
+
+	meal_data: Dict[str, Any] = Field(..., description="Complete meal plan data to save")
+	save_date: str = Field(..., description="Date of the meal in ISO format (YYYY-MM-DD)")
+
+
+class WeightRequest(BaseModel):
+	"""Request payload for saving a weight entry."""
+
+	weight: float = Field(..., gt=0, description="Weight in kilograms")

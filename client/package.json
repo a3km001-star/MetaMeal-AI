@@ -15,7 +15,8 @@
     "axios": "^1.13.5",
     "lucide-react": "^0.454.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "recharts": "^2.8.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

@@ -1,223 +1,187 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Dumbbell, Plus, Loader2, Clock, Flame, Target } from "lucide-react";
+import { generateWorkoutPlan, getLatestWorkoutPlan } from "../api/workout";
 
-interface Exercise {
-  name: string;
-  sets: string;
+interface WorkoutExercise {
+  exercise: string;
+  muscle: string;
+  sets: number;
   reps: string;
   rest: string;
 }
 
 interface WorkoutDay {
-  focus: string;
-  duration: string;
-  calories: string;
-  exercises: Exercise[];
+  type: string;
+  exercises: WorkoutExercise[];
 }
 
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
 function WorkoutPlanner() {
-  const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [selectedDay, setSelectedDay] = useState<number>(0);
+  const [weeklyPlan, setWeeklyPlan] = useState<Record<
+    string,
+    WorkoutDay
+  > | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
-  const generateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [lockExpiresAt, setLockExpiresAt] = useState<Date | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    return () => {
-      if (generateTimerRef.current) {
-        clearTimeout(generateTimerRef.current);
-        generateTimerRef.current = null;
+    const fetchPlanFromDB = async () => {
+      try {
+        const response = await getLatestWorkoutPlan();
+        const planData = response?.data?.data?.plan;
+        if (planData && response.data.data.created_at) {
+          const createdAt = new Date(response.data.data.created_at);
+          const expiresAt = new Date(createdAt.getTime() + ONE_WEEK_MS);
+
+          if (expiresAt > new Date()) {
+            setWeeklyPlan(planData.weekly_plan ?? planData);
+            setLockExpiresAt(expiresAt);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch workout plan from DB", err);
+        // Fallback to localStorage
+        const storedPlan = localStorage.getItem("workout_plan");
+        const storedGeneratedAt = localStorage.getItem(
+          "workout_plan_generated_at",
+        );
+
+        if (storedPlan && storedGeneratedAt) {
+          const generatedAt = new Date(storedGeneratedAt);
+          if (!Number.isNaN(generatedAt.getTime())) {
+            const lockUntil = new Date(generatedAt.getTime() + ONE_WEEK_MS);
+            if (lockUntil > new Date()) {
+              try {
+                setWeeklyPlan(JSON.parse(storedPlan));
+                setLockExpiresAt(lockUntil);
+              } catch {
+                localStorage.removeItem("workout_plan");
+                localStorage.removeItem("workout_plan_generated_at");
+              }
+            }
+          }
+        }
       }
     };
+
+    fetchPlanFromDB();
   }, []);
 
-  const handleGeneratePlan = (): void => {
-    setIsGenerating(true);
-    if (generateTimerRef.current) {
-      clearTimeout(generateTimerRef.current);
+  const getWorkoutPayload = () => {
+    const storedPrefs = localStorage.getItem("user_preferences");
+    let preferences = {} as Record<string, any>;
+
+    try {
+      preferences = storedPrefs ? JSON.parse(storedPrefs) : {};
+    } catch {
+      preferences = {};
     }
-    generateTimerRef.current = setTimeout(() => {
+
+    const goal = [
+      "muscle_gain",
+      "fat_loss",
+      "maintenance",
+      "endurance",
+    ].includes(preferences.goal)
+      ? preferences.goal
+      : "maintenance";
+
+    const activityLevel = preferences.activity_level;
+    const experienceLevel =
+      activityLevel === "very_active"
+        ? "advanced"
+        : activityLevel === "moderately_active"
+          ? "intermediate"
+          : "beginner";
+
+    const weeklyVolume =
+      goal === "fat_loss" ? 8 : goal === "muscle_gain" ? 12 : 10;
+
+    return {
+      goal,
+      experience_level: experienceLevel,
+      split: "push_pull_legs",
+      training_days: 7,
+      weekly_volume_per_muscle: weeklyVolume,
+      equipment: "gym",
+      injuries: [],
+      focus_muscles: [],
+    };
+  };
+
+  const buildUpcomingDates = () => {
+    const today = new Date();
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today);
+      date.setHours(0, 0, 0, 0);
+      date.setDate(today.getDate() + index);
+      return date;
+    });
+  };
+
+  const formatWeekday = (date: Date) =>
+    date.toLocaleDateString(undefined, { weekday: "short" });
+
+  const formatShortDate = (date: Date) =>
+    date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+  const formatWorkoutType = (type?: string) => {
+    if (!type) {
+      return "Not generated";
+    }
+    return type
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (match) => match.toUpperCase());
+  };
+
+  const dayDates = buildUpcomingDates();
+  const isLocked = Boolean(lockExpiresAt && lockExpiresAt > new Date());
+  const selectedDayKey = `day_${selectedDay + 1}`;
+  const currentPlan = weeklyPlan ? weeklyPlan[selectedDayKey] : null;
+  const isRestDay = currentPlan ? currentPlan.exercises.length === 0 : false;
+
+  const handleGeneratePlan = async () => {
+    if (isLocked) {
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsGenerating(true);
+
+    try {
+      const payload = getWorkoutPayload();
+      const response = await generateWorkoutPlan(payload);
+      const plan = response?.data?.data?.weekly_plan as
+        | Record<string, WorkoutDay>
+        | undefined;
+
+      if (plan) {
+        // After generation, fetch the plan from DB to get the lock expiration
+        const dbResponse = await getLatestWorkoutPlan();
+        if (dbResponse?.data?.data?.created_at) {
+          const createdAt = new Date(dbResponse.data.data.created_at);
+          const expiresAt = new Date(createdAt.getTime() + ONE_WEEK_MS);
+          setLockExpiresAt(expiresAt);
+        }
+
+        setWeeklyPlan(plan);
+        setSelectedDay(0);
+      } else {
+        setErrorMessage("Unable to generate workout plan. Please try again.");
+      }
+    } catch (error: any) {
+      setErrorMessage(
+        error?.response?.data?.detail?.message ||
+          error?.message ||
+          "Workout generation failed. Please try again.",
+      );
+    } finally {
       setIsGenerating(false);
-      alert("New workout plan generated!");
-      generateTimerRef.current = null;
-    }, 1500);
+    }
   };
-
-  const days: string[] = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-  ];
-
-  const workoutPlan: Record<number, WorkoutDay> = {
-    1: {
-      focus: "Chest & Triceps",
-      duration: "45 min",
-      calories: "420 kcal",
-      exercises: [
-        {
-          name: "Bench Press",
-          sets: "4 sets",
-          reps: "8-12 reps",
-          rest: "90s",
-        },
-        {
-          name: "Incline Dumbbell Press",
-          sets: "3 sets",
-          reps: "10-12 reps",
-          rest: "60s",
-        },
-        {
-          name: "Cable Flyes",
-          sets: "3 sets",
-          reps: "12-15 reps",
-          rest: "60s",
-        },
-        {
-          name: "Tricep Dips",
-          sets: "3 sets",
-          reps: "10-12 reps",
-          rest: "60s",
-        },
-        {
-          name: "Overhead Tricep Extension",
-          sets: "3 sets",
-          reps: "12-15 reps",
-          rest: "45s",
-        },
-      ],
-    },
-    2: {
-      focus: "Back & Biceps",
-      duration: "50 min",
-      calories: "450 kcal",
-      exercises: [
-        { name: "Deadlifts", sets: "4 sets", reps: "6-8 reps", rest: "120s" },
-        { name: "Pull-ups", sets: "3 sets", reps: "8-10 reps", rest: "90s" },
-        {
-          name: "Barbell Rows",
-          sets: "4 sets",
-          reps: "8-10 reps",
-          rest: "90s",
-        },
-        {
-          name: "Bicep Curls",
-          sets: "3 sets",
-          reps: "10-12 reps",
-          rest: "60s",
-        },
-        {
-          name: "Hammer Curls",
-          sets: "3 sets",
-          reps: "12-15 reps",
-          rest: "45s",
-        },
-      ],
-    },
-    3: {
-      focus: "Legs & Core",
-      duration: "55 min",
-      calories: "500 kcal",
-      exercises: [
-        { name: "Squats", sets: "4 sets", reps: "8-10 reps", rest: "120s" },
-        { name: "Leg Press", sets: "3 sets", reps: "10-12 reps", rest: "90s" },
-        {
-          name: "Romanian Deadlifts",
-          sets: "3 sets",
-          reps: "10-12 reps",
-          rest: "90s",
-        },
-        { name: "Leg Curls", sets: "3 sets", reps: "12-15 reps", rest: "60s" },
-        { name: "Plank", sets: "3 sets", reps: "60s hold", rest: "45s" },
-      ],
-    },
-    4: {
-      focus: "Shoulders & Abs",
-      duration: "45 min",
-      calories: "400 kcal",
-      exercises: [
-        {
-          name: "Military Press",
-          sets: "4 sets",
-          reps: "8-10 reps",
-          rest: "90s",
-        },
-        {
-          name: "Lateral Raises",
-          sets: "3 sets",
-          reps: "12-15 reps",
-          rest: "60s",
-        },
-        {
-          name: "Front Raises",
-          sets: "3 sets",
-          reps: "12-15 reps",
-          rest: "60s",
-        },
-        {
-          name: "Russian Twists",
-          sets: "3 sets",
-          reps: "20 reps",
-          rest: "45s",
-        },
-        {
-          name: "Mountain Climbers",
-          sets: "3 sets",
-          reps: "30s",
-          rest: "45s",
-        },
-      ],
-    },
-    5: {
-      focus: "Full Body Power",
-      duration: "50 min",
-      calories: "480 kcal",
-      exercises: [
-        { name: "Power Clean", sets: "4 sets", reps: "5 reps", rest: "120s" },
-        {
-          name: "Front Squats",
-          sets: "4 sets",
-          reps: "8-10 reps",
-          rest: "90s",
-        },
-        { name: "Push Press", sets: "3 sets", reps: "8-10 reps", rest: "90s" },
-        { name: "Box Jumps", sets: "3 sets", reps: "10 reps", rest: "60s" },
-        { name: "Burpees", sets: "3 sets", reps: "15 reps", rest: "60s" },
-      ],
-    },
-    6: {
-      focus: "Active Recovery",
-      duration: "30 min",
-      calories: "200 kcal",
-      exercises: [
-        {
-          name: "Light Jogging",
-          sets: "1 set",
-          reps: "10 min",
-          rest: "N/A",
-        },
-        { name: "Yoga Flow", sets: "1 set", reps: "15 min", rest: "N/A" },
-        { name: "Stretching", sets: "1 set", reps: "5 min", rest: "N/A" },
-      ],
-    },
-    7: {
-      focus: "Rest Day",
-      duration: "0 min",
-      calories: "0 kcal",
-      exercises: [
-        {
-          name: "Complete Rest",
-          sets: "-",
-          reps: "Recovery Day",
-          rest: "N/A",
-        },
-      ],
-    },
-  };
-
-  const currentPlan = workoutPlan[selectedDay];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -226,29 +190,54 @@ function WorkoutPlanner() {
           Workout Plan Generator
         </h1>
         <p className="text-gray-600 dark:text-gray-300">
-          Your personalized 7-day workout schedule
+          Generate your personalized 7-day workout schedule. Once generated, the
+          plan is locked for one week.
         </p>
       </div>
+
+      {isLocked && lockExpiresAt ? (
+        <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 dark:border-orange-700 dark:bg-orange-900/40 p-4 text-orange-800 dark:text-orange-100">
+          <p className="text-sm font-semibold">Workout generation locked</p>
+          <p className="text-sm">
+            You last generated a workout plan on{" "}
+            {new Date(
+              lockExpiresAt.getTime() - ONE_WEEK_MS,
+            ).toLocaleDateString()}
+            . The next generation unlocks on{" "}
+            {lockExpiresAt.toLocaleDateString()}.
+          </p>
+        </div>
+      ) : null}
+
+      {errorMessage ? (
+        <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/40 p-4 text-red-800 dark:text-red-100">
+          {errorMessage}
+        </div>
+      ) : null}
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-            Select Day
+            Weekly Schedule
           </h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-          {days.map((day, index) => (
+          {dayDates.map((date, index) => (
             <button
               key={index}
-              onClick={() => setSelectedDay(index + 1)}
-              className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all ${
-                selectedDay === index + 1
+              onClick={() => setSelectedDay(index)}
+              className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all text-left ${
+                selectedDay === index
                   ? "bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-lg scale-105"
                   : "bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
               }`}
             >
-              <span className="text-xs font-medium mb-1">Day {index + 1}</span>
-              <span className="text-sm font-bold">{day.slice(0, 3)}</span>
+              <span className="text-xs uppercase tracking-wide opacity-80">
+                {formatWeekday(date)}
+              </span>
+              <span className="mt-1 text-sm font-semibold">
+                {formatShortDate(date)}
+              </span>
             </button>
           ))}
         </div>
@@ -260,10 +249,10 @@ function WorkoutPlanner() {
             <Target className="w-10 h-10 text-orange-600" />
             <div>
               <p className="text-orange-800 dark:text-orange-300 font-semibold text-sm">
-                Focus
+                Workout Type
               </p>
               <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
-                {currentPlan.focus}
+                {formatWorkoutType(currentPlan?.type)}
               </p>
             </div>
           </div>
@@ -273,10 +262,10 @@ function WorkoutPlanner() {
             <Clock className="w-10 h-10 text-blue-600" />
             <div>
               <p className="text-blue-800 dark:text-blue-300 font-semibold text-sm">
-                Duration
+                Exercises
               </p>
               <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                {currentPlan.duration}
+                {currentPlan ? currentPlan.exercises.length : 0}
               </p>
             </div>
           </div>
@@ -286,10 +275,14 @@ function WorkoutPlanner() {
             <Flame className="w-10 h-10 text-red-600" />
             <div>
               <p className="text-red-800 dark:text-red-300 font-semibold text-sm">
-                Est. Burn
+                Status
               </p>
               <p className="text-xl font-bold text-red-600 dark:text-red-400">
-                {currentPlan.calories}
+                {currentPlan
+                  ? isRestDay
+                    ? "Rest Day"
+                    : "Workout Day"
+                  : "Not Generated"}
               </p>
             </div>
           </div>
@@ -299,49 +292,80 @@ function WorkoutPlanner() {
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-md mb-6">
         <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6 flex items-center">
           <Dumbbell className="w-6 h-6 mr-2 text-orange-600" />
-          {days[selectedDay - 1]}'s Workout
+          {formatWeekday(dayDates[selectedDay])} —{" "}
+          {formatShortDate(dayDates[selectedDay])}
         </h3>
-        <div className="space-y-4">
-          {currentPlan.exercises.map((exercise, index) => (
-            <div
-              key={index}
-              className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-            >
-              <div className="mb-3 sm:mb-0">
-                <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">
-                  {index + 1}. {exercise.name}
-                </h4>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {exercise.sets}
-                </p>
-              </div>
-              <div className="flex space-x-6 text-sm">
-                <div className="text-center">
-                  <p className="text-gray-500 dark:text-gray-400 font-medium">
-                    Reps
-                  </p>
-                  <p className="font-semibold text-gray-800 dark:text-white">
-                    {exercise.reps}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-gray-500 dark:text-gray-400 font-medium">
-                    Rest
-                  </p>
-                  <p className="font-semibold text-gray-800 dark:text-white">
-                    {exercise.rest}
-                  </p>
-                </div>
-              </div>
+
+        {currentPlan ? (
+          currentPlan.exercises.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-8 text-center text-gray-600 dark:text-gray-300">
+              <p className="text-lg font-semibold">Rest Day</p>
+              <p className="mt-2">
+                Take it easy today and recover for tomorrow&apos;s workout.
+              </p>
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="space-y-4">
+              {currentPlan.exercises.map((exercise, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                >
+                  <div className="mb-3 sm:mb-0">
+                    <h4 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">
+                      {index + 1}. {exercise.exercise}
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Primary muscle: {exercise.muscle}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <div className="text-center">
+                      <p className="text-gray-500 dark:text-gray-400 font-medium">
+                        Sets
+                      </p>
+                      <p className="font-semibold text-gray-800 dark:text-white">
+                        {exercise.sets}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-gray-500 dark:text-gray-400 font-medium">
+                        Reps
+                      </p>
+                      <p className="font-semibold text-gray-800 dark:text-white">
+                        {exercise.reps}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-gray-500 dark:text-gray-400 font-medium">
+                        Rest
+                      </p>
+                      <p className="font-semibold text-gray-800 dark:text-white">
+                        {exercise.rest}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : (
+          <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-8 text-center text-gray-600 dark:text-gray-300">
+            <p className="text-lg font-semibold">
+              No workout plan generated yet.
+            </p>
+            <p className="mt-2">
+              Click the button below to create a personalized weekly plan and
+              lock it for 7 days.
+            </p>
+          </div>
+        )}
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-4">
         <button
           onClick={handleGeneratePlan}
-          disabled={isGenerating}
+          disabled={isLocked || isGenerating}
           className="flex items-center space-x-2 bg-gradient-to-r from-orange-500 to-red-600 text-white px-8 py-4 rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isGenerating ? (
@@ -352,10 +376,14 @@ function WorkoutPlanner() {
           ) : (
             <>
               <Plus className="w-5 h-5" />
-              <span>Generate New Workout Plan</span>
+              <span>Generate Weekly Workout</span>
             </>
           )}
         </button>
+        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-2xl text-center">
+          Workout generation will create a weekly plan once and lock the
+          generate button for 7 days.
+        </p>
       </div>
     </div>
   );

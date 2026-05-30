@@ -69,16 +69,36 @@ function Coach({ setActiveView, user }: CoachProps) {
   const [input, setInput] = useState<string>("");
   const [isSending, setIsSending] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isInitialLoadRef = useRef(true);
   const conversationId = useMemo(() => getConversationId(user.id), [user.id]);
   const configId = useMemo(() => getConfigId(user.id), [user.id]);
 
   const scrollToBottom = (): void => {
+    const container = messagesContainerRef.current;
+    if (container) {
+      try {
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+        return;
+      } catch (e) {
+        // fallback
+      }
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Only auto-scroll when a new message from assistant arrives (not on initial load)
+    if (isInitialLoadRef.current) {
+      return;
+    }
+    if (
+      messages.length > 0 &&
+      messages[messages.length - 1].role === "assistant"
+    ) {
+      scrollToBottom();
+    }
+  }, [messages.length]);
 
   useEffect(() => {
     let isActive = true;
@@ -98,6 +118,7 @@ function Coach({ setActiveView, user }: CoachProps) {
 
         if (isActive && filtered.length > 0) {
           setMessages(filtered);
+          isInitialLoadRef.current = false;
         }
       } catch (error) {
         if (isActive) {
@@ -116,6 +137,7 @@ function Coach({ setActiveView, user }: CoachProps) {
                   },
                 ],
           );
+          isInitialLoadRef.current = false;
         }
       }
     };
@@ -214,7 +236,10 @@ function Coach({ setActiveView, user }: CoachProps) {
         className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden flex flex-col"
         style={{ height: "calc(100vh - 300px)" }}
       >
-        <div className="flex-grow overflow-y-auto p-6 space-y-4">
+        <div
+          ref={messagesContainerRef}
+          className="flex-grow overflow-y-auto p-6 space-y-4"
+        >
           {messages.map((message, index) => (
             <div
               key={index}
