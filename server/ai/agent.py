@@ -114,7 +114,7 @@ def _call_groq(messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, An
 		payload = {
 			"model": model,
 			"temperature": 0.2,
-			"max_tokens": 800,
+			"max_tokens": int(os.getenv("GROQ_CHAT_MAX_TOKENS", "1400")),
 			"messages": messages,
 		}
 		if tools is not None:
@@ -230,7 +230,7 @@ def run_chat(
 		assistant_message = choices[0].get("message", {})
 
 	final_text = assistant_message.get("content", "").strip()
-	if not final_text and tool_calls:
+	if not final_text:
 		logger.warning("Assistant returned empty content; retrying without tools")
 		messages.append(
 			{

@@ -9,8 +9,8 @@ import requests
 from dotenv import load_dotenv
 
 
-DEFAULT_GROQ_MODEL = "llama3-70b-8192"
-FALLBACK_GROQ_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b"
+FALLBACK_GROQ_MODEL = "openai/gpt-oss-20b"
 GROQ_BASE_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 
